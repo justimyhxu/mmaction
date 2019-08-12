@@ -1,6 +1,7 @@
 import mmcv
 import numpy as np
 import os.path as osp
+import pickle
 from mmcv.parallel import DataContainer as DC
 from torch.utils.data import Dataset
 
@@ -78,8 +79,10 @@ class AVADataset(Dataset):
         self.img_prefix = img_prefix
 
         # load annotations
+        self.test_mode = test_mode
         self.video_infos = self.load_annotations(
             ann_file, video_stat_file, exclude_file)
+
         self.ann_file = ann_file
         self.exclude_file = exclude_file
         self.label_file = label_file
@@ -89,7 +92,8 @@ class AVADataset(Dataset):
             self.proposals = None
 
         # filter videos with no annotation during training
-        if not test_mode:
+
+        if not self.test_mode:
             valid_inds = self._filter_records(exclude_file=exclude_file)
             print("{} out of {} frames are valid.".format(
                 len(valid_inds), len(self.video_infos)))
@@ -194,6 +198,11 @@ class AVADataset(Dataset):
         ]
         The 'ann' field is optional for testing
         """
+        cache_path = './data/ava/{}_new_records.pkl'.format('test' if self.test_mode else 'train')
+        if osp.exists(cache_path):
+            undecode_file = open(cache_path,'rb')
+            new_records = pickle.load(undecode_file)
+            return new_records
 
         record_dict_by_image = dict()
         for record in records:
@@ -248,7 +257,9 @@ class AVADataset(Dataset):
                               fps=_FPS,
                               ann=ann)
             new_records.append(new_record)
-
+        file = open(cache_path,'wb')
+        pickle.dump(new_records, file)
+        file.close()
         return new_records
 
     def load_annotations(self, ann_file, video_stat_file, exclude_file=None):
@@ -389,12 +400,15 @@ class AVADataset(Dataset):
         if len(gt_bboxes) == 0:
             return None
 
+
         gt_bboxes = gt_bboxes.astype(np.float32)
 
         indice = video_info['fps'] * \
             (video_info['timestamp'] - _TIMESTAMP_START) + 1
+        #TODO FIX this BUG
         skip_offsets = np.random.randint(
             self.new_step, size=self.old_length // self.new_step)
+
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))))
 

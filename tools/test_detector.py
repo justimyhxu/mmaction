@@ -37,7 +37,7 @@ def _data_func(data, device_id):
 def parse_args():
     parser = argparse.ArgumentParser(description='Test an action detector')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--checkpoint', help='checkpoint file')
     parser.add_argument(
         '--gpus', default=1, type=int, help='GPU number used for testing')
     parser.add_argument(
@@ -56,6 +56,7 @@ def parse_args():
     parser.add_argument('--exclude_file', type=str,
                         default='data/ava/'
                         'ava_val_excluded_timestamps_v2.1.csv')
+    parser.add_argument('--ignore_cache', action='store_true', help='whether to ignore cache')
     args = parser.parse_args()
     return args
 
@@ -68,37 +69,46 @@ def main():
 
     cfg = mmcv.Config.fromfile(args.config)
     # set cudnn_benchmark
+
+    cfg.work_dir = './work_dirs/' + cfg.filename.split('/')[-1].split('.')[0]
+    if args.out is None:
+        args.out = osp.join(cfg.work_dir,'results.pkl')
+    if args.checkpoint is None:
+        args.checkpoint = osp.join(cfg.work_dir, 'latest.pth')
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
     cfg.data.test.test_mode = True
 
     dataset = obj_from_dict(cfg.data.test, datasets, dict(test_mode=True))
-    if args.gpus == 1:
-        model = build_detector(
-            cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
-        load_checkpoint(model, args.checkpoint, strict=True)
-        model = MMDataParallel(model, device_ids=[0])
-
-        data_loader = build_dataloader(
-            dataset,
-            imgs_per_gpu=1,
-            workers_per_gpu=cfg.data.workers_per_gpu,
-            num_gpus=1,
-            dist=False,
-            shuffle=False)
-        outputs = single_test(model, data_loader)
+    if osp.exists(args.out) and not args.ignore_cache:
+        outputs = mmcv.load(args.out)
     else:
-        model_args = cfg.model.copy()
-        model_args.update(train_cfg=None, test_cfg=cfg.test_cfg)
-        model_type = getattr(detectors, model_args.pop('type'))
-        outputs = parallel_test(
-            model_type,
-            model_args,
-            args.checkpoint,
-            dataset,
-            _data_func,
-            range(args.gpus),
-            workers_per_gpu=args.proc_per_gpu)
+        if args.gpus == 1:
+            model = build_detector(
+                cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
+            load_checkpoint(model, args.checkpoint, strict=True)
+            model = MMDataParallel(model, device_ids=[0])
+
+            data_loader = build_dataloader(
+                dataset,
+                imgs_per_gpu=1,
+                workers_per_gpu=cfg.data.workers_per_gpu,
+                num_gpus=1,
+                dist=False,
+                shuffle=False)
+            outputs = single_test(model, data_loader)
+        else:
+            model_args = cfg.model.copy()
+            model_args.update(train_cfg=None, test_cfg=cfg.test_cfg)
+            model_type = getattr(detectors, model_args.pop('type'))
+            outputs = parallel_test(
+                model_type,
+                model_args,
+                args.checkpoint,
+                dataset,
+                _data_func,
+                range(args.gpus),
+                workers_per_gpu=args.proc_per_gpu)
 
     if args.out:
         print('writing results to {}'.format(args.out))
@@ -110,9 +120,9 @@ def main():
 
         result_file = osp.join(args.out + '.csv')
         results2csv(dataset, outputs, result_file)
-
         ava_eval(result_file, eval_type,
                  args.label_file, args.ann_file, args.exclude_file)
+
 
 
 if __name__ == '__main__':
