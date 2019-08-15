@@ -33,6 +33,7 @@ cfg.CUDA = torch.cuda.is_available()
 device = torch.device('cuda' if cfg.CUDA else 'cpu')
 # random.seed(1)
 # Firstly Load Proposal
+
 class Tracking_Proposal(object):
     def __init__(self,
                  img_prefix,
@@ -79,7 +80,7 @@ class Tracking_Proposal(object):
 
     def tracking(self):
         keys = list(self.proposal_dict.keys())
-        random.shuffle(keys)
+        # random.shuffle(keys)
         shuffle_dict = [(key, self.proposal_dict[key]) for key in keys]
 
         for video_id, frame_info in shuffle_dict:

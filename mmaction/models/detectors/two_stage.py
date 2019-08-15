@@ -4,7 +4,7 @@ from .base import BaseDetector
 from .test_mixins import RPNTestMixin, BBoxTestMixin
 from .. import builder
 from ..registry import DETECTORS
-from mmaction.core.bbox2d import (bbox2roi, bbox2result,
+from mmaction.core.bbox2d import (bbox2roi, bbox3d2roi, bbox2result,
                                   build_assigner, build_sampler)
 
 
@@ -113,9 +113,9 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
         if not self.train_cfg.train_detector:
             proposal_list = []
             for proposal in proposals:
-                select_inds = proposal[:, 4] >= min(
+                select_inds = proposal[..., 4] >= min(
                     self.train_cfg.person_det_score_thr,
-                    max(proposal[:, 4]))
+                    max(proposal[..., 4][:, 0] if len(proposal.shape) > 2 else proposal[..., 4]))
                 proposal_list.append(proposal[select_inds])
 
         # assign gts and sample proposals
@@ -128,9 +128,11 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
                 gt_bboxes_ignore = [None for _ in range(num_imgs)]
             sampling_results = []
             for i in range(num_imgs):
+                ## TOdo fix 32
                 assign_result = bbox_assigner.assign(
                     proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
                     gt_labels[i])
+
                 sampling_result = bbox_sampler.sample(
                     assign_result,
                     proposal_list[i],
@@ -140,8 +142,12 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
                 sampling_results.append(sampling_result)
 
         # bbox head forward and loss
+
         if self.with_bbox:
-            rois = bbox2roi([res.bboxes for res in sampling_results])
+            # import ipdb
+            # ipdb.set_trace()
+            # rois = bbox2roi([res.bboxes for res in sampling_results])
+            rois = bbox3d2roi([res.bboxes for res in sampling_results])
             # TODO: a more flexible way to decide which feature maps to use
             bbox_feats = self.bbox_roi_extractor(
                 x[:self.bbox_roi_extractor.num_inputs], rois)

@@ -124,6 +124,18 @@ def bbox2roi(bbox_list):
     rois = torch.cat(rois_list, 0)
     return rois
 
+def bbox3d2roi(bbox_list):
+    bbox_len = bbox_list[0].shape[1]
+    rois_list = []
+    for img_id, bboxes in enumerate(bbox_list):
+        if bboxes.size(0)>0:
+            img_inds = bboxes.new_full((bboxes.size(0), 1), img_id)
+            rois = torch.cat([img_inds, bboxes[:, :bbox_len]], dim=-1)
+        else:
+            rois = bboxes.new_zeros((0, bbox_len))
+        rois_list.append(rois)
+    rois = torch.cat(rois_list, 0)
+    return rois
 
 def roi2bbox(rois):
     bbox_list = []

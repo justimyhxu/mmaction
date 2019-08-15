@@ -74,12 +74,14 @@ class AVADataset(Dataset):
                  multiscale_crop=False,
                  scales=None,
                  max_distort=1,
-                 input_format='NCHW'):
+                 input_format='NCHW',
+                 with_tracking=False):
         # prefix of images path
         self.img_prefix = img_prefix
 
         # load annotations
         self.test_mode = test_mode
+        self.with_tracking = with_tracking
         self.video_infos = self.load_annotations(
             ann_file, video_stat_file, exclude_file)
 
@@ -200,8 +202,8 @@ class AVADataset(Dataset):
         """
         cache_path = './data/ava/{}_new_records.pkl'.format('test' if self.test_mode else 'train')
         if osp.exists(cache_path):
-            undecode_file = open(cache_path,'rb')
-            new_records = pickle.load(undecode_file)
+            print('Loading annotations from {} Cache!!!'.format(cache_path))
+            new_records = mmcv.load(cache_path)
             return new_records
 
         record_dict_by_image = dict()
@@ -271,7 +273,10 @@ class AVADataset(Dataset):
         return self.arrange_annotations(rawframe_records, video_stats)
         # return mmcv.load(ann_file)
 
+
+
     def load_proposals(self, proposal_file):
+        print('proosal_path', proposal_file)
         return mmcv.load(proposal_file)
 
     def get_ann_info(self, idx):
@@ -370,14 +375,26 @@ class AVADataset(Dataset):
                 video_info['video_id'], video_info['timestamp'])
             if image_key not in self.proposals:
                 return None
-            proposals = self.proposals[image_key][: self.num_max_proposals]
+
+            _proposals = self.proposals[image_key][: self.num_max_proposals]
+            if self.with_tracking:
+                get_proposal = lambda x: x[0]
+                get_scores = lambda x: x[1]
+                scores = np.array(list(map(get_scores, _proposals)))
+                # scores = np.tile(scores[:, np.newaxis, np.newaxis], (1, self.old_length // self.new_step, 1))
+                proposals = np.array(list(map(get_proposal,_proposals)))
+
+            else:
+                proposals = _proposals
+
             if len(proposals) == 0:
                 return None
-            if not (proposals.shape[1] == 4 or proposals.shape[1] == 5):
+
+            if not (proposals.shape[-1] == 4 or proposals.shape[-1] == 5):
                 raise AssertionError(
                     'proposals should have shapes (n, 4) or (n,5), '
                     'but found {}'.format(proposals.shape))
-            if proposals.shape[1] == 4:
+            if proposals.shape[-1] == 4:
                 proposals = proposals * np.array(
                     [video_info['width'], video_info['height'],
                      video_info['width'], video_info['height']])
@@ -386,11 +403,14 @@ class AVADataset(Dataset):
                     [video_info['width'], video_info['height'],
                      video_info['width'], video_info['height'], 1.0])
             proposals = proposals.astype(np.float32)
-            if proposals.shape[1] == 5:
+            if proposals.shape[-1] == 5:
                 scores = proposals[:, 4, None]
                 proposals = proposals[:, :4]
             else:
-                scores = None
+                if self.with_tracking:
+                    pass
+                else:
+                    scores = None
 
         ann = self.get_ann_info(idx)
         gt_bboxes = ann['bboxes']
@@ -407,7 +427,7 @@ class AVADataset(Dataset):
             (video_info['timestamp'] - _TIMESTAMP_START) + 1
         #TODO FIX this BUG
         skip_offsets = np.random.randint(
-            self.new_step, size=self.old_length // self.new_step)
+            self.new_step, size=self.old_length // self.new_step)*0
 
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))))
@@ -481,9 +501,17 @@ class AVADataset(Dataset):
         if self.proposals is not None:
             proposals = self.bbox_transform(
                 proposals, img_shape, scale_factor, flip, crop=crop_quadruple)
-            proposals = np.hstack(
-                [proposals, scores]) if scores is not None else proposals
+            if self.with_tracking:
+                _, temporal_length, _ = proposals.shape
+                swap_axes = list(range(0, temporal_length))
+                swap_axes.remove(temporal_length // 2)
+                swap_axes.insert(0, temporal_length // 2)
+                proposals = np.array([np.insert(proposal[swap_axes].reshape(-1), 4, score) for proposal,score in zip(proposals, scores)])
+            else:
+                proposals = np.concatenate(
+                    [proposals, scores], axis=-1) if scores is not None else proposals
             data['proposals'] = DC(to_tensor(proposals))
+
 
         gt_bboxes = self.bbox_transform(
             gt_bboxes, img_shape, scale_factor, flip, crop=crop_quadruple)

@@ -3,7 +3,7 @@ from .assigners import BaseAssigner, MaxIoUAssigner, AssignResult
 from .samplers import BaseSampler, PseudoSampler, RandomSampler
 from .assign_sampling import build_assigner, build_sampler, assign_and_sample
 from .transforms import (bbox2delta, delta2bbox, bbox_flip, bbox_mapping,
-                         bbox_mapping_back, bbox2roi, bbox2result)
+                         bbox_mapping_back, bbox2roi, bbox2result, bbox3d2roi)
 from .bbox_target import bbox_target
 
 __all__ = [
@@ -11,5 +11,5 @@ __all__ = [
     'BaseSampler', 'PseudoSampler', 'RandomSampler',
     'build_assigner', 'build_sampler', 'assign_and_sample',
     'bbox2delta', 'delta2bbox', 'bbox_flip', 'bbox_mapping',
-    'bbox_mapping_back', 'bbox2roi', 'roi2bbox', 'bbox2result', 'bbox_target'
+    'bbox_mapping_back', 'bbox2roi', 'roi2bbox', 'bbox2result', 'bbox_target', 'bbox3d2roi'
 ]

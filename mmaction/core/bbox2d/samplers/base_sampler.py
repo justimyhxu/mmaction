@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import torch
+import numpy as np
 
 from .sampling_result import SamplingResult
 
@@ -45,14 +46,27 @@ class BaseSampler(metaclass=ABCMeta):
         Returns:
             :obj:`SamplingResult`: Sampling result.
         """
-        bboxes = bboxes[:, :4]
+        # import ipdb
+        # ipdb.set_trace()
+        bbox_len = bboxes.shape[1]
+        if bbox_len > 5:
+            _c_bboxes = bboxes.clone()
+            _c_bboxes = torch.cat([_c_bboxes[:,:4],_c_bboxes[:,5:]],dim=1)
+        else:
+            _c_bboxes = bboxes[:, :4]
 
         gt_flags = bboxes.new_zeros((bboxes.shape[0], ), dtype=torch.uint8)
         if self.add_gt_as_proposals:
-            bboxes = torch.cat([gt_bboxes, bboxes], dim=0)
+            if bbox_len > 5:
+                _r_gt_bboxes = gt_bboxes.repeat([1, int(bbox_len //4)])
+            else:
+                _r_gt_bboxes = gt_bboxes
+            bboxes = torch.cat([_r_gt_bboxes, _c_bboxes], dim=0)
             assign_result.add_gt_(gt_labels)
             gt_ones = bboxes.new_ones(gt_bboxes.shape[0], dtype=torch.uint8)
             gt_flags = torch.cat([gt_ones, gt_flags])
+        else:
+            bboxes = _c_bboxes
 
         num_expected_pos = int(self.num * self.pos_fraction)
         pos_inds = self.pos_sampler._sample_pos(
@@ -70,6 +84,6 @@ class BaseSampler(metaclass=ABCMeta):
         neg_inds = self.neg_sampler._sample_neg(
             assign_result, num_expected_neg, bboxes=bboxes, **kwargs)
         neg_inds = neg_inds.unique()
-
-        return SamplingResult(pos_inds, neg_inds, bboxes, gt_bboxes,
+        # print('bbox_shape[1]', )
+        return SamplingResult(pos_inds, neg_inds, bboxes , gt_bboxes,
                               assign_result, gt_flags)
