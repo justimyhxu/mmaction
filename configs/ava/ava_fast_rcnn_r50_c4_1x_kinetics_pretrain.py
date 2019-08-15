@@ -37,11 +37,11 @@ model = dict(
         bn_eval=False,
         bn_frozen=True),
     bbox_roi_extractor=dict(
-        type='SingleRoIStraight3DExtractorTracking',
-        roi_layer=dict(type='RoIAlign', out_size=14, sample_num=2),
+        type='SingleRoIStraight3DExtractor',
+        roi_layer=dict(type='RoIAlign', out_size=16, sample_num=2),
         out_channels=1024,
         featmap_strides=[16],
-        with_temporal_pool=False),
+        with_temporal_pool=True),
     dropout_ratio=0.3,
     bbox_head=dict(
         type='BBoxHead',
