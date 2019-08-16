@@ -93,10 +93,8 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
 
         losses = dict()
 
-
         # RPN forward and loss
         if self.with_rpn:
-
             x_slice = (xx[:, :, xx.size(2) // 2, :, :] for xx in x)
             rpn_outs = self.rpn_head(x_slice)
             rpn_loss_inputs = rpn_outs + \
