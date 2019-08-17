@@ -68,6 +68,7 @@ def main():
         raise ValueError('The output file must be a pkl file.')
 
     cfg = mmcv.Config.fromfile(args.config)
+    print('CFG',cfg)
     # set cudnn_benchmark
 
     cfg.work_dir = './work_dirs/' + cfg.filename.split('/')[-1].split('.')[0]

@@ -259,6 +259,7 @@ class AVADataset(Dataset):
                               fps=_FPS,
                               ann=ann)
             new_records.append(new_record)
+
         file = open(cache_path,'wb')
         pickle.dump(new_records, file)
         file.close()
@@ -358,7 +359,10 @@ class AVADataset(Dataset):
 
     def __getitem__(self, idx):
         if self.test_mode:
-            return self.prepare_test_imgs(idx)
+            data = self.prepare_test_imgs(idx)
+            # if data is None:
+            #     print('None',self.video_infos[idx])
+            return data
         while True:
             data = self.prepare_train_imgs(idx)
             if data is None:
@@ -547,43 +551,44 @@ class AVADataset(Dataset):
         #     proposal = proposal.astype(np.float32)
         # else:
         #     proposal = None
-
+        # import ipdb
+        # ipdb.set_trace()
         if self.proposals is not None:
             image_key = "{},{:04d}".format(
                 video_info['video_id'], video_info['timestamp'])
             if image_key not in self.proposals:
-                return None
-
-            _proposals = self.proposals[image_key][: self.num_max_proposals]
+                _proposal = [(np.tile(np.array([[0,0,1,1]]),(32,1)),1)]
+            else:
+                _proposal = self.proposals[image_key][: self.num_max_proposals]
             if self.with_tracking:
                 get_proposal = lambda x: x[0]
                 get_scores = lambda x: x[1]
-                scores = np.array(list(map(get_scores, _proposals)))
+                scores = np.array(list(map(get_scores, _proposal)))
                 # scores = np.tile(scores[:, np.newaxis, np.newaxis], (1, self.old_length // self.new_step, 1))
-                proposals = np.array(list(map(get_proposal,_proposals)))
+                proposal = np.array(list(map(get_proposal,_proposal)))
 
             else:
-                proposals = _proposals
+                proposal = _proposal
 
-            if len(proposals) == 0:
+            if len(proposal) == 0:
                 return None
 
-            if not (proposals.shape[-1] == 4 or proposals.shape[-1] == 5):
+            if not (proposal.shape[-1] == 4 or proposal.shape[-1] == 5):
                 raise AssertionError(
                     'proposals should have shapes (n, 4) or (n,5), '
-                    'but found {}'.format(proposals.shape))
-            if proposals.shape[-1] == 4:
-                proposals = proposals * np.array(
+                    'but found {}'.format(proposal.shape))
+            if proposal.shape[-1] == 4:
+                proposal = proposal * np.array(
                     [video_info['width'], video_info['height'],
                      video_info['width'], video_info['height']])
             else:
-                proposals = proposals * np.array(
+                proposal = proposal * np.array(
                     [video_info['width'], video_info['height'],
                      video_info['width'], video_info['height'], 1.0])
-            proposals = proposals.astype(np.float32)
-            if proposals.shape[-1] == 5:
-                scores = proposals[:, 4, None]
-                proposals = proposals[:, :4]
+            proposal = proposal.astype(np.float32)
+            if proposal.shape[-1] == 5:
+                scores = proposal[:, 4, None]
+                proposal = proposal[:, :4]
             else:
                 if self.with_tracking:
                     pass
@@ -633,7 +638,7 @@ class AVADataset(Dataset):
                                           zip(proposal, scores)])
                 else:
                     _proposal = np.concatenate(
-                        [proposal, scores], axis=-1) if scores is not None else proposals
+                        [proposal, scores], axis=-1) if scores is not None else proposal
                 # data['proposals'] = DC(to_tensor(proposals))
             return _img_group, _img_meta, _proposal
 
@@ -654,7 +659,7 @@ class AVADataset(Dataset):
             proposals = []
             for scale in self.img_scales:
                 _img_group, _img_meta, _proposal = prepare_single(
-                    img_group, scale, None, False, proposals)
+                    img_group, scale, None, False, proposal)
                 if self.input_format == "NCTHW":
                     # Convert [L x C x H x W] to [C x L x H x W]
                     _img_group = np.transpose(_img_group, (1, 0, 2, 3))
@@ -663,11 +668,10 @@ class AVADataset(Dataset):
                 proposals.append(_proposal)
                 if self.flip_ratio > 0:
                     _img_group, _img_meta, _proposal = prepare_single(
-                        img_group, scale, None, True, proposals)
+                        img_group, scale, None, True, proposal)
                     if self.input_format == "NCTHW":
                         # Convert [L x C x H x W] to [C x L x H x W]
                         _img_group = np.transpose(_img_group, (1, 0, 2, 3))
-                    img_groups.append(_img_group)
                     img_metas.append(DC(_img_meta, cpu_only=True))
                     proposals.append(_proposal)
             data['img_group_{}'.format(i)] = img_groups

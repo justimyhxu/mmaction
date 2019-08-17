@@ -146,7 +146,7 @@ data = dict(
         exclude_file='data/ava/annotations/ava_val_excluded_timestamps_v2.1.csv',
         label_file='data/ava/annotations/ava_action_list_v2.1_for_activitynet_2018.pbtxt',
         video_stat_file='data/ava/ava_video_resolution_stats.csv',
-        proposal_file='data/ava/ava_dense_proposals_val.FAIR.recall_93.9.pkl',
+        proposal_file='data/ava/tracking_ava_dense_proposals_val.FAIR.recall_93.9.pkl',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         input_format='NCTHW',
@@ -162,7 +162,8 @@ data = dict(
         flip_ratio=0,
         resize_keep_ratio=True,
         with_label=False,
-        test_mode=True))
+        test_mode=True,
+        with_tracking=True))
 # optimizer
 optimizer = dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=1e-6)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))

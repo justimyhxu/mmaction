@@ -1,9 +1,9 @@
-from mmaction.core.bbox2d import bbox2roi, bbox_mapping
+from mmaction.core.bbox2d import bbox2roi, bbox_mapping, bbox3d2roi
 from mmaction.core.post_processing import (merge_aug_proposals,
                                            merge_aug_bboxes,
                                            multiclass_nms)
 
-
+import torch
 class RPNTestMixin(object):
 
     def simple_test_rpn(self, x, img_meta, rpn_test_cfg):
@@ -37,7 +37,12 @@ class BBoxTestMixin(object):
                            rcnn_test_cfg,
                            rescale=False):
         """Test only det bboxes without augmentation."""
-        rois = bbox2roi(proposals)
+        # rois = bbox2roi(proposals)
+        _c_proposals = []
+        for proposal in proposals:
+            _c_proposal = proposal.clone()
+            _c_proposals.append(torch.cat([_c_proposal[:,:4],_c_proposal[:,5:]],dim=1))
+        rois = bbox3d2roi(_c_proposals)
         roi_feats = self.bbox_roi_extractor(
             x[:len(self.bbox_roi_extractor.featmap_strides)], rois)
         if self.with_shared_head:

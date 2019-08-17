@@ -180,6 +180,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
         x = self.extract_feat(img_group)
 
         if proposals is None:
+            print('which')
             proposal_list = self.simple_test_rpn(
                 x, img_meta, self.test_cfg.rpn)
         else:
