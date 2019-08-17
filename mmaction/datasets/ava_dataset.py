@@ -642,11 +642,10 @@ class AVADataset(Dataset):
         indice = video_info['fps'] * \
             (video_info['timestamp'] - _TIMESTAMP_START) + 1
         skip_offsets = np.random.randint(
-            self.new_step, size=self.old_length // self.new_step)
+            self.new_step, size=self.old_length // self.new_step) * 0
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))))
-        import ipdb
-        ipdb.set_trace()
+
         for i, (modality, image_tmpl) in enumerate(
                 zip(self.modalities, self.image_tmpls)):
             img_group = self._get_frames(
