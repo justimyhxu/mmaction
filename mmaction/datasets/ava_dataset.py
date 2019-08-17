@@ -524,8 +524,6 @@ class AVADataset(Dataset):
 
     def prepare_test_imgs(self, idx):
         video_info = self.video_infos[idx]
-        import ipdb
-        ipdb.set_trace()
         # load proposals if necessary
         # if self.proposals is not None:
         #     image_key = "{},{:04d}".format(
