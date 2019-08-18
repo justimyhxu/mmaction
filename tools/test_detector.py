@@ -76,6 +76,7 @@ def main():
         args.out = osp.join(cfg.work_dir,'results.pkl')
     if args.checkpoint is None:
         args.checkpoint = osp.join(cfg.work_dir, 'latest.pth')
+        print(args.checkpoint)
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
     cfg.data.test.test_mode = True

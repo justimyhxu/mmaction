@@ -634,7 +634,7 @@ class AVADataset(Dataset):
                     swap_axes = list(range(0, temporal_length))
                     swap_axes.remove(temporal_length // 2)
                     swap_axes.insert(0, temporal_length // 2)
-                    _proposal = np.array([np.insert(proposal[swap_axes].reshape(-1), 4, score) for proposal, score in
+                    _proposal = np.array([np.insert(prop[swap_axes].reshape(-1), 4, score) for prop, score in
                                           zip(proposal, scores)])
                 else:
                     _proposal = np.concatenate(
