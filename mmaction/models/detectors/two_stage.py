@@ -88,7 +88,8 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
                       **kwargs):
         assert num_modalities == 1
         img_group = kwargs['img_group_0']
-
+        if 'gt_tracking_bboxes' in kwargs:
+            gt_tracking_bboxes = kwargs['gt_tracking_bboxes']
         x = self.extract_feat(img_group)
 
         losses = dict()
@@ -132,13 +133,21 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin):
                 assign_result = bbox_assigner.assign(
                     proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
                     gt_labels[i])
-
-                sampling_result = bbox_sampler.sample(
-                    assign_result,
-                    proposal_list[i],
-                    gt_bboxes[i],
-                    gt_labels[i],
-                    feats=[lvl_feat[i][None] for lvl_feat in x])
+                if 'gt_tracking_bboxes' not in kwargs:
+                    sampling_result = bbox_sampler.sample(
+                        assign_result,
+                        proposal_list[i],
+                        gt_bboxes[i],
+                        gt_labels[i],
+                        feats=[lvl_feat[i][None] for lvl_feat in x])
+                else:
+                    sampling_result = bbox_sampler.sample(
+                        assign_result,
+                        proposal_list[i],
+                        gt_bboxes[i],
+                        gt_labels[i],
+                        feats=[lvl_feat[i][None] for lvl_feat in x],
+                        gt_tracking_bboxes=gt_tracking_bboxes[i])
                 sampling_results.append(sampling_result)
 
         # bbox head forward and loss

@@ -62,6 +62,7 @@ class AVADataset(Dataset):
                  size_divisor=None,
                  multiscale_mode='value',
                  proposal_file=None,
+                 gt_tracking_proposal_file=None,
                  num_max_proposals=1000,
                  flip_ratio=0.5,
                  resize_keep_ratio=True,
@@ -75,13 +76,18 @@ class AVADataset(Dataset):
                  scales=None,
                  max_distort=1,
                  input_format='NCHW',
-                 with_tracking=False):
+                 with_tracking=False,
+                 gt_with_tracking=False):
         # prefix of images path
         self.img_prefix = img_prefix
 
         # load annotations
         self.test_mode = test_mode
         self.with_tracking = with_tracking
+
+        self.gt_with_tracking = gt_with_tracking
+        if self.gt_with_tracking:
+            self.gt_tracking_proposal = self.load_proposals(gt_tracking_proposal_file)
         self.video_infos = self.load_annotations(
             ann_file, video_stat_file, exclude_file)
 
@@ -419,7 +425,13 @@ class AVADataset(Dataset):
         ann = self.get_ann_info(idx)
         gt_bboxes = ann['bboxes']
         gt_labels = ann['labels']
-
+        if self.gt_with_tracking:
+            gt_tracking_bboxes = self.gt_tracking_proposal[image_key]
+            gt_tracking_bboxes = np.array(list(map(get_proposal, gt_tracking_bboxes)))
+            gt_tracking_bboxes = gt_tracking_bboxes * np.array(
+                    [video_info['width'], video_info['height'],
+                     video_info['width'], video_info['height']])
+            gt_tracking_bboxes = gt_tracking_bboxes.astype(np.float32)
         # skip the record if there is no valid gt bbox
         if len(gt_bboxes) == 0:
             return None
@@ -517,9 +529,14 @@ class AVADataset(Dataset):
             data['proposals'] = DC(to_tensor(proposals))
 
 
+
         gt_bboxes = self.bbox_transform(
             gt_bboxes, img_shape, scale_factor, flip, crop=crop_quadruple)
         data['gt_bboxes'] = DC(to_tensor(gt_bboxes))
+        if self.gt_with_tracking:
+            gt_tracking_bboxes = self.bbox_transform(
+                gt_tracking_bboxes, img_shape, scale_factor, flip, crop=crop_quadruple)
+            data['gt_tracking_bboxes'] = DC(to_tensor(gt_tracking_bboxes))
 
         if self.with_label:
             data['gt_labels'] = DC(to_tensor(gt_labels))

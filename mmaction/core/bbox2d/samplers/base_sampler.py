@@ -57,10 +57,15 @@ class BaseSampler(metaclass=ABCMeta):
 
         gt_flags = bboxes.new_zeros((bboxes.shape[0], ), dtype=torch.uint8)
         if self.add_gt_as_proposals:
-            if bbox_len > 5:
-                _r_gt_bboxes = gt_bboxes.repeat([1, int(bbox_len //4)])
+            if 'gt_tracking_bboxes' not in kwargs:
+                if bbox_len > 5:
+                    _r_gt_bboxes = gt_bboxes.repeat([1, int(bbox_len //4)])
+                else:
+                    _r_gt_bboxes = gt_bboxes
             else:
-                _r_gt_bboxes = gt_bboxes
+                f_dim = _c_bboxes.shape[1]
+                _r_gt_bboxes = kwargs['gt_tracking_bboxes'].reshape(-1, f_dim)
+
             bboxes = torch.cat([_r_gt_bboxes, _c_bboxes], dim=0)
             assign_result.add_gt_(gt_labels)
             gt_ones = bboxes.new_ones(gt_bboxes.shape[0], dtype=torch.uint8)

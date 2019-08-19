@@ -98,6 +98,8 @@ data = dict(
         label_file='data/ava/annotations/ava_action_list_v2.1_for_activitynet_2018.pbtxt',
         video_stat_file='data/ava/ava_video_resolution_stats.csv',
         proposal_file='data/ava/tracking_ava_dense_proposals_train.FAIR.recall_93.9.pkl',
+        gt_tracking_proposal_file='data/ava/tracking_gt_ava_dense_proposals_train.FAIR.recall_93.9.pkl',
+
         # proposal_file = 'data/ava/train_tracking.pkl',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
@@ -115,7 +117,9 @@ data = dict(
         resize_keep_ratio=True,
         test_mode=False,
         with_label=True,
-        with_tracking=True),
+        with_tracking=True,
+        gt_with_tracking=True
+        ),
     val=dict(
         type=dataset_type,
         ann_file='data/ava/annotations/ava_val_v2.1.csv',
@@ -189,5 +193,6 @@ dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking'
 load_from = None
-resume_from = 'work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking/epoch_10.pth'
+# resume_from = 'work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking/epoch_10.pth'
+resume_from = None
 workflow = [('train', 1)]
