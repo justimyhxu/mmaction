@@ -3,6 +3,7 @@ from .lmdbframes_dataset import LMDBFramesDataset
 from .video_dataset import VideoDataset
 from .ssn_dataset import SSNDataset
 from .ava_dataset import AVADataset
+from .kitchen_dataset import KitchenDataset
 from .utils import get_untrimmed_dataset, get_trimmed_dataset
 from .loader import GroupSampler, DistributedGroupSampler, build_dataloader
 

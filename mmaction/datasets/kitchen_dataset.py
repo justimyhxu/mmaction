@@ -16,7 +16,7 @@ class RawFramesRecord(object):
         self.an_frame = an_time*_FPS
     @property
     def path(self):
-        return self._data[0]
+        return self._data[0].strip()
 
     @property
     def start_frame(self):
@@ -27,7 +27,7 @@ class RawFramesRecord(object):
         return int(self._data[2])- self.an_frame
 
     @property
-    def verb(self):
+    def label(self):
         return int(self._data[3])
 
     @property
@@ -43,7 +43,7 @@ class RawFramesRecord(object):
         return self.end_frame - self.start_frame + 1
 
 
-class RawFramesDataset(Dataset):
+class KitchenDataset(Dataset):
     def __init__(self,
                  ann_file,
                  img_prefix,
@@ -80,6 +80,8 @@ class RawFramesDataset(Dataset):
 
         self.vid_dict = {}
         # load annotations
+        self.ob_time = ob_time
+        self.an_time = an_time
         self.video_infos = self.load_annotations(ann_file)
         # normalization config
         self.img_norm_cfg = img_norm_cfg
@@ -96,8 +98,7 @@ class RawFramesDataset(Dataset):
         self.random_shift = random_shift
         # whether to temporally jitter if new_step > 1
         self.temporal_jitter = temporal_jitter
-        self.ob_time = ob_time
-        self.an_time = an_time
+
         # parameters for modalities
         if isinstance(modality, (list, tuple)):
             self.modalities = modality
@@ -195,7 +196,8 @@ class RawFramesDataset(Dataset):
                 idx = [idx]
             video_path = image_tmpl.format(directory)
             if video_path not in self.vid_dict:
-                self.vid_dict[video_path] = open(video_path).read()
+                print('load video',video_path)
+                self.vid_dict[video_path] = open(video_path,'rb').read()
             encoded_video = self.vid_dict[video_path]
             decoded_frames, width, height = lintel.loadvid_frame_nums(encoded_video, frame_nums=idx,
                                                                       should_seek=True, use_frame=True)

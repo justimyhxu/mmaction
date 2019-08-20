@@ -25,17 +25,17 @@ model = dict(
 train_cfg = None
 test_cfg = None
 # dataset settings
-dataset_type = 'RawFramesDataset'
+dataset_type = 'KitchenDataset'
 data_root = 'data/epic-kitchen/rawframes'
 img_norm_cfg = dict(
    mean=[104, 117, 128], std=[1, 1, 1], to_rgb=False)
 
 data = dict(
-    videos_per_gpu=32,
+    videos_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
-        ann_file='data/epic-kitchen/train.txt',
+        ann_file='data/epic-kitchen/debug_train.txt',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         num_segments=3,
@@ -55,7 +55,9 @@ data = dict(
         multiscale_crop=True,
         scales=[1, 0.875, 0.75, 0.66],
         max_distort=1,
-        test_mode=False),
+        test_mode=False,
+        ob_time=1,
+        an_time=1),
     val=dict(
         type=dataset_type,
         ann_file='data/epic-kitchen/val.txt',
