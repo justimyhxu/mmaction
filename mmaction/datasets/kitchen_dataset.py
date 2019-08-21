@@ -196,7 +196,7 @@ class KitchenDataset(Dataset):
                 idx = [idx]
             video_path = image_tmpl.format(directory)
             if video_path not in self.vid_dict:
-                print('load video',video_path)
+                # print('load video',video_path)
                 self.vid_dict[video_path] = open(video_path,'rb').read()
             encoded_video = self.vid_dict[video_path]
             decoded_frames, width, height = lintel.loadvid_frame_nums(encoded_video, frame_nums=idx,
@@ -318,25 +318,35 @@ class KitchenDataset(Dataset):
         return images
 
     def __getitem__(self, idx):
+        import time
+
         record = self.video_infos[idx]
+        sample_begin = time.time()
         if self.test_mode:
             segment_indices, skip_offsets = self._get_test_indices(record)
         else:
             segment_indices, skip_offsets = self._sample_indices(
                 record) if self.random_shift else self._get_val_indices(record)
+        sample_end = time.time()
+        print('1->>sample_begin',sample_begin-sample_end)
 
+        updatedict_begin = time.time()
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
                    )
         _gt_label = dict(noun = DC(to_tensor(record.noun), stack=True,pad_dims=None),
                         verb = DC(to_tensor(record.verb), stack=True,pad_dims=None))
 
         data.update(dict(gt_label=_gt_label))
+        updatedict_end = time.time()
+        print('2->>updatedict_end',updatedict_end-updatedict_begin)
 
         # handle the first modality
         modality = self.modalities[0]
         image_tmpl = self.image_tmpls[0]
         img_group = self._get_frames(
             record, image_tmpl, modality, segment_indices, skip_offsets)
+        load_frame_end = time.time()
+        print('3->> load_frame', load_frame_end-updatedict_end)
 
         flip = True if np.random.rand() < self.flip_ratio else False
         if (self.img_scale_dict is not None
@@ -352,6 +362,7 @@ class KitchenDataset(Dataset):
             flip=flip, keep_ratio=self.resize_keep_ratio,
             div_255=self.div_255,
              is_flow=True if modality == 'Flow' else False)
+        print('4->>>transform_time',time.time()-load_frame_end)
         ori_shape = (256, 340, 3)
         img_meta = dict(
             ori_shape=ori_shape,
