@@ -27,7 +27,7 @@ class RawFramesRecord(object):
         return int(self._data[2])- self.an_frame
 
     @property
-    def label(self):
+    def verb(self):
         return int(self._data[3])
 
     @property
