@@ -141,14 +141,14 @@ class TSN2D(BaseRecognizer):
 
         if self.with_noun_head:
             noun_cls_score = self.noun_cls_head(x)
-            gt_label = gt_label['noun'].squeeze()
-            loss_score_noun = self.noun_cls_head.loss(noun_cls_score, gt_label, name='noun_cls_loss')
+            noun_gt_label = gt_label['noun'].squeeze()
+            loss_score_noun = self.noun_cls_head.loss(noun_cls_score, noun_gt_label, name='noun_cls_loss')
             losses.update(loss_score_noun)
 
         if self.with_noun_head:
             verb_cls_score = self.verb_cls_head(x)
-            gt_label = gt_label['verb'].squeeze()
-            loss_score_verb = self.verb_cls_head.loss(verb_cls_score, gt_label, name='verb_cls_loss')
+            verb_gt_label = gt_label['verb'].squeeze()
+            loss_score_verb = self.verb_cls_head.loss(verb_cls_score, verb_gt_label, name='verb_cls_loss')
             losses.update(loss_score_verb)
 
 
