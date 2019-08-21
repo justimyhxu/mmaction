@@ -41,7 +41,7 @@ img_norm_cfg = dict(
    mean=[104, 117, 128], std=[1, 1, 1], to_rgb=False)
 
 data = dict(
-    videos_per_gpu=2,
+    videos_per_gpu=32,
     workers_per_gpu=8,
     train=dict(
         type=dataset_type,
