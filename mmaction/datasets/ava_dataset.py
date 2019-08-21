@@ -540,7 +540,7 @@ class AVADataset(Dataset):
             swap_axes = list(range(0, temporal_length))
             swap_axes.remove(temporal_length // 2)
             swap_axes.insert(0, temporal_length // 2)
-            gt_tracking_bboxes = gt_tracking_bboxes[swap_axes]
+            gt_tracking_bboxes = gt_tracking_bboxes[:,swap_axes]
             data['gt_tracking_bboxes'] = DC(to_tensor(gt_tracking_bboxes))
 
         if self.with_label:
