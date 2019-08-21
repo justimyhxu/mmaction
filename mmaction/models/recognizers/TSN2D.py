@@ -175,5 +175,9 @@ class TSN2D(BaseRecognizer):
             x = x.squeeze(1)
         if self.with_cls_head:
             x = self.cls_head(x)
+        if self.noun_cls_head:
+            noun = self.noun_cls_head(x)
+        if self.verb_cls_head:
+            verb = self.verb_cls_head
 
-        return x.cpu().numpy()
+        return noun.cpu().numpy(), verb.cpu().numpy()

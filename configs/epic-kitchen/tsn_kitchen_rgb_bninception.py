@@ -45,7 +45,7 @@ data = dict(
     workers_per_gpu=0,
     train=dict(
         type=dataset_type,
-        ann_file='data/epic-kitchen/debug_train.txt',
+        ann_file='data/epic-kitchen/train.txt',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         num_segments=3,
@@ -88,10 +88,13 @@ data = dict(
         random_crop=False,
         more_fix_crop=False,
         multiscale_crop=False,
-        test_mode=False),
+        test_mode=False,
+        ob_time = 1,
+        an_time = 1,
+        ),
     test=dict(
         type=dataset_type,
-        ann_file='data/epic-kitchen/test.txt',
+        ann_file='data/epic-kitchen/val.txt',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         num_segments=25,
@@ -109,7 +112,9 @@ data = dict(
         random_crop=False,
         more_fix_crop=False,
         multiscale_crop=False,
-        test_mode=True))
+        test_mode=True,
+        ob_time=1,
+        an_time=1))
 # optimizer
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0005)
 optimizer_config = dict(grad_clip=dict(max_norm=40, norm_type=2))
