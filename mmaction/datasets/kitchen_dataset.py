@@ -220,7 +220,7 @@ class KitchenDataset(Dataset):
     def _load_image_frame(self, directory, image_tmpl, modality, idx):
         if modality in ['RGB', 'RGBDiff']:
             img_path = osp.join(directory, image_tmpl.format(idx))
-            return mmcv.read(img_path)
+            return mmcv.imread(img_path)
 
         elif modality == 'Flow':
             x_imgs = mmcv.imread(
