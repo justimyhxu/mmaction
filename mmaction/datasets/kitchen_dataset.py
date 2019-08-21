@@ -302,11 +302,11 @@ class KitchenDataset(Dataset):
             p = int(seg_ind)
             for i, ind in enumerate(range(0, self.old_length, self.new_step)):
                 if p + skip_offsets[i] <= record.end_frame:
-                    seg_imgs = self._load_image(osp.join(
+                    seg_imgs = self._load_image_frame(osp.join(
                         self.img_prefix, record.path),
                         image_tmpl, modality, p + skip_offsets[i])
                 else:
-                    seg_imgs = self._load_image(
+                    seg_imgs = self._load_image_frame(
                         osp.join(self.img_prefix, record.path),
                         image_tmpl, modality, p)
                 images.extend(seg_imgs)
