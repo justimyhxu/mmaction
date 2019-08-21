@@ -299,7 +299,7 @@ class KitchenDataset(Dataset):
 
     def _get_frames(self, record, image_tmpl, modality, indices, skip_offsets):
         images = list()
-
+        indices[indices<1] = indices[indices>=1].min()
         for seg_ind in indices:
             p = int(seg_ind)
             for i, ind in enumerate(range(0, self.old_length, self.new_step)):
@@ -307,6 +307,7 @@ class KitchenDataset(Dataset):
                     seg_imgs = self._load_image_frame(osp.join(
                         self.img_prefix, record.path),
                         image_tmpl, modality, p + skip_offsets[i])
+
                 else:
                     seg_imgs = self._load_image_frame(
                         osp.join(self.img_prefix, record.path),
