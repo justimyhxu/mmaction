@@ -37,9 +37,9 @@ class TSN2D(BaseRecognizer):
             raise NotImplementedError
 
         if verb_cls_head is not None:
-            self.verb_cls_head = builder.build_head(cls_head)
+            self.verb_cls_head = builder.build_head(verb_cls_head)
         if noun_cls_head is not None:
-            self.noun_cls_head = builder.build_head(cls_head)
+            self.noun_cls_head = builder.build_head(noun_cls_head)
         else:
             raise NotImplementedError
 
