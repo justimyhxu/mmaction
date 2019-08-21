@@ -299,7 +299,7 @@ class KitchenDataset(Dataset):
 
     def _get_frames(self, record, image_tmpl, modality, indices, skip_offsets):
         images = list()
-        indices[indices<0] = 0
+        indices[indices<1] = 1
         for seg_ind in indices:
             p = int(seg_ind)
             for i, ind in enumerate(range(0, self.old_length, self.new_step)):
