@@ -219,10 +219,8 @@ class KitchenDataset(Dataset):
                 '["RGB", "RGBDiff", "Flow"]')
     def _load_image_frame(self, directory, image_tmpl, modality, idx):
         if modality in ['RGB', 'RGBDiff']:
-            import ipdb
-            ipdb.set_trace()
             img_path = osp.join(directory, image_tmpl.format(idx))
-            return mmcv.imread(img_path)
+            return [mmcv.imread(img_path)]
 
         elif modality == 'Flow':
             x_imgs = mmcv.imread(
