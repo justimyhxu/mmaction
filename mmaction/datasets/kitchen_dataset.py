@@ -280,10 +280,11 @@ class KitchenDataset(Dataset):
 
     def _get_frames(self, record, image_tmpl, modality, indices, skip_offsets):
         images = list()
+
         for seg_ind in indices:
             p = int(seg_ind)
             for i, ind in enumerate(range(0, self.old_length, self.new_step)):
-                if p + skip_offsets[i] <= record.num_frames:
+                if p + skip_offsets[i] <= record.end_frame:
                     seg_imgs = self._load_image(osp.join(
                         self.img_prefix, record.path),
                         image_tmpl, modality, p + skip_offsets[i])
@@ -291,8 +292,8 @@ class KitchenDataset(Dataset):
                     seg_imgs = self._load_image(
                         osp.join(self.img_prefix, record.path),
                         image_tmpl, modality, p)
-                images.extend(seg_imgs)
-                if p + self.new_step < record.num_frames:
+                images.append(seg_imgs)
+                if p + self.new_step < record.end_frame:
                     p += self.new_step
         return images
 
@@ -305,8 +306,11 @@ class KitchenDataset(Dataset):
                 record) if self.random_shift else self._get_val_indices(record)
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
-                    gt_label=DC(to_tensor(record.label), stack=True,
-                                pad_dims=None))
+                   )
+        _gt_label = dict(noun = DC(to_tensor(record.noun), stack=True,pad_dims=None),
+                        verb = DC(to_tensor(record.verb), stack=True,pad_dims=None))
+
+        data.update(dict(gt_label=_gt_label))
 
         # handle the first modality
         modality = self.modalities[0]
@@ -320,6 +324,7 @@ class KitchenDataset(Dataset):
             img_scale = self.img_scale_dict[record.path]
         else:
             img_scale = self.img_scale
+
         (img_group, img_shape, pad_shape,
          scale_factor, crop_quadruple) = self.img_group_transform(
             img_group, img_scale,

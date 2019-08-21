@@ -15,7 +15,9 @@ class TSN2D(BaseRecognizer):
                  segmental_consensus=None,
                  cls_head=None,
                  train_cfg=None,
-                 test_cfg=None):
+                 test_cfg=None,
+                 verb_cls_head=None,
+                 noun_cls_head=None):
 
         super(TSN2D, self).__init__()
         self.backbone = builder.build_backbone(backbone)
@@ -34,8 +36,10 @@ class TSN2D(BaseRecognizer):
         else:
             raise NotImplementedError
 
-        if cls_head is not None:
-            self.cls_head = builder.build_head(cls_head)
+        if verb_cls_head is not None:
+            self.verb_cls_head = builder.build_head(cls_head)
+        if noun_cls_head is not None:
+            self.noun_cls_head = builder.build_head(cls_head)
         else:
             raise NotImplementedError
 
@@ -60,6 +64,13 @@ class TSN2D(BaseRecognizer):
     @property
     def with_cls_head(self):
         return hasattr(self, 'cls_head') and self.cls_head is not None
+
+    @property
+    def with_verb_head(self):
+        return hasattr(self, 'verb_cls_head') and self.verb_cls_head is not None
+    @property
+    def with_noun_head(self):
+        return hasattr(self, 'noun_cls_head') and self.noun_cls_head is not None
 
     def _construct_2d_backbone_conv1(self, in_channels):
         modules = list(self.backbone.modules())
@@ -127,6 +138,19 @@ class TSN2D(BaseRecognizer):
             gt_label = gt_label.squeeze()
             loss_cls = self.cls_head.loss(cls_score, gt_label)
             losses.update(loss_cls)
+
+        if self.with_noun_head:
+            noun_cls_score = self.noun_cls_head(x)
+            gt_label = gt_label['noun'].squeeze()
+            loss_score_noun = self.noun_cls_head(noun_cls_score, gt_label, name='noun_cls_loss')
+            losses.update(loss_score_noun)
+
+        if self.with_noun_head:
+            verb_cls_score = self.verb_cls_head(x)
+            gt_label = gt_label['verb'].squeeze()
+            loss_score_verb = self.verb_cls_head(verb_cls_score, gt_label, name='verb_cls_loss')
+            losses.update(loss_score_verb)
+
 
         return losses
 

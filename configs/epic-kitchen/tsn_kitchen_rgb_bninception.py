@@ -13,7 +13,7 @@ model = dict(
     segmental_consensus=dict(
         type='SimpleConsensus',
         consensus_type='avg'),
-    cls_head=dict(
+    noun_cls_head=dict(
         type='ClsHead',
         with_avg_pool=False,
         temporal_feature_size=1,
@@ -21,7 +21,17 @@ model = dict(
         dropout_ratio=0.8,
         in_channels=1024,
         init_std=0.001,
-        num_classes=101))
+        num_classes=352),
+    verb_cls_head = dict(
+        type='ClsHead',
+        with_avg_pool=False,
+        temporal_feature_size=1,
+        spatial_feature_size=1,
+        dropout_ratio=0.8,
+        in_channels=1024,
+        init_std=0.001,
+        num_classes=125),
+        )
 train_cfg = None
 test_cfg = None
 # dataset settings
