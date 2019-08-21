@@ -42,7 +42,7 @@ img_norm_cfg = dict(
 
 data = dict(
     videos_per_gpu=32,
-    workers_per_gpu=8,
+    workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file='data/epic-kitchen/train.txt',
