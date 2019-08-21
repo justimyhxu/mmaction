@@ -192,6 +192,6 @@ dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking'
 load_from = None
-# resume_from = 'work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking/epoch_10.pth'
-resume_from = None
+resume_from = 'work_dirs/ava_fast_rcnn_r50_c4_1x_kinetics_pretrain_tracking/epoch_1.pth'
+# resume_from = None
 workflow = [('train', 1)]
