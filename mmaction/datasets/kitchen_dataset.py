@@ -221,7 +221,7 @@ class KitchenDataset(Dataset):
         if modality in ['RGB', 'RGBDiff']:
 
             img_path = osp.join(directory, image_tmpl.format(idx))
-            print('img_path', img_path)
+            # print('img_path', img_path)
             return [mmcv.imread(img_path)]
 
         elif modality == 'Flow':
