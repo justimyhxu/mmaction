@@ -217,6 +217,23 @@ class KitchenDataset(Dataset):
             raise ValueError(
                 'Not implemented yet; modality should be '
                 '["RGB", "RGBDiff", "Flow"]')
+    def _load_image_frame(self, directory, image_tmpl, modality, idx):
+        if modality in ['RGB', 'RGBDiff']:
+            img_path = osp.join(directory, image_tmpl.format(idx))
+            return mmcv.read(img_path)
+
+        elif modality == 'Flow':
+            x_imgs = mmcv.imread(
+                osp.join(directory, image_tmpl.format('x', idx)),
+                flag='grayscale')
+            y_imgs = mmcv.imread(
+                osp.join(directory, image_tmpl.format('y', idx)),
+                flag='grayscale')
+            return [x_imgs, y_imgs]
+        else:
+            raise ValueError(
+                'Not implemented yet; modality should be '
+                '["RGB", "RGBDiff", "Flow"]')
 
     def _sample_indices(self, record):
         '''
@@ -292,7 +309,7 @@ class KitchenDataset(Dataset):
                     seg_imgs = self._load_image(
                         osp.join(self.img_prefix, record.path),
                         image_tmpl, modality, p)
-                images.append(seg_imgs)
+                images.extend(seg_imgs)
                 if p + self.new_step < record.end_frame:
                     p += self.new_step
         return images
