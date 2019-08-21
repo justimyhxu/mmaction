@@ -536,7 +536,7 @@ class AVADataset(Dataset):
         if self.gt_with_tracking:
             gt_tracking_bboxes = self.bbox_transform(
                 gt_tracking_bboxes, img_shape, scale_factor, flip, crop=crop_quadruple)
-            _, temporal_length, _ = proposals.shape
+            _, temporal_length, _ = gt_tracking_bboxes.shape
             swap_axes = list(range(0, temporal_length))
             swap_axes.remove(temporal_length // 2)
             swap_axes.insert(0, temporal_length // 2)
