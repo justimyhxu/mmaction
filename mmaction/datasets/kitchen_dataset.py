@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from .transforms import (GroupImageTransform)
 from .utils import to_tensor
 import lintel
-_FPS = 30
+_FPS = 60
 
 class RawFramesRecord(object):
     def __init__(self, row, ob_time, an_time):
@@ -20,11 +20,11 @@ class RawFramesRecord(object):
 
     @property
     def start_frame(self):
-        return int(self._data[1])- self.ob_frame - self.an_frame
+        return int(self._data[1])*2- self.ob_frame - self.an_frame
 
     @property
     def end_frame(self):
-        return int(self._data[2])- self.an_frame
+        return int(self._data[2])*2- self.an_frame
 
     @property
     def verb(self):
