@@ -9,7 +9,8 @@ from mmaction.apis import (train_network, init_dist, get_root_logger,
                            set_random_seed)
 from mmaction.models import build_recognizer
 import torch
-
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train an action recognizer')
