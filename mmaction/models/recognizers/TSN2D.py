@@ -178,6 +178,6 @@ class TSN2D(BaseRecognizer):
         if self.noun_cls_head:
             noun = self.noun_cls_head(x)
         if self.verb_cls_head:
-            verb = self.verb_cls_head
+            verb = self.verb_cls_head(x)
 
         return noun.cpu().numpy(), verb.cpu().numpy()

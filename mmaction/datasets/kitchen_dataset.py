@@ -174,7 +174,8 @@ class KitchenDataset(Dataset):
     def get_ann_info(self, idx):
         return {'path': self.video_infos[idx].path,
                 'num_frames': self.video_infos[idx].num_frames,
-                'label': self.video_infos[idx].label}
+                'noun_label': self.video_infos[idx].noun,
+                'verb_label': self.video_infos[idx].verb}
         # return self.video_infos[idx]['ann']
 
     def _set_group_flag(self):
