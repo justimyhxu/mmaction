@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument('--use_softmax', action='store_true',
                         help='whether to use softmax score')
     parser.add_argument('--ignore_cache', action='store_true', help='whether to ignore cache')
-    parser.add_argument('--challenge')
+    parser.add_argument('--challenge', action='store_true')
     args = parser.parse_args()
     return args
 
