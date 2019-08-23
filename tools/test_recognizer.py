@@ -149,8 +149,8 @@ def main():
             verb = verb.mean(axis=0)
             noun_re = dict(zip(map(str, list(range(len(noun)))),noun.tolist()))
             verb_re = dict(zip(map(str, list(range(len(verb)))),verb.tolist()))
-            results_dict.update(action_id=dict(noun=noun_re,
-                                verb=verb_re))
+            results_dict[str(action_id)]=dict(noun=noun_re,
+                                verb=verb_re)
         final_dict.update(results=results_dict)
         mmcv.dump(final_dict, 'test.json')
 
