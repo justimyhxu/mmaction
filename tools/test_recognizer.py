@@ -139,7 +139,7 @@ def main():
         final_dict = dict()
         final_dict.update(dict(
             version="0.1",
-            challenge="action_recognition"
+            challenge="action_anticipation"
         ))
         results_dict = dict()
         for action_id,res in zip(action_ids, results):
