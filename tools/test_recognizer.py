@@ -161,7 +161,7 @@ def main():
     noun_output = list(map(get_noun,outputs))
     verb_output = list(map(get_verb, outputs))
     if args.challenge:
-
+        convert_json(results=outputs)
     else:
         top_acc(noun_output, gt_noun_labels,'noun')
         top_acc(verb_output, gt_verb_labels, 'verb')
