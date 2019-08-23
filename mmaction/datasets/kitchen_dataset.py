@@ -28,15 +28,23 @@ class RawFramesRecord(object):
 
     @property
     def verb(self):
-        return int(self._data[3])
+        try:
+            return int(self._data[3])
+        except:
+            return None
 
     @property
     def noun(self):
-        return int(self._data[4])
-
+        try:
+            return int(self._data[4])
+        except:
+            return None
     @property
     def action(self):
-        return int(self._data[5])
+        try:
+            return int(self._data[5])
+        except:
+            return None
 
     @property
     def num_frames(self):

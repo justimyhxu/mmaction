@@ -48,6 +48,7 @@ def parse_args():
     parser.add_argument('--use_softmax', action='store_true',
                         help='whether to use softmax score')
     parser.add_argument('--ignore_cache', action='store_true', help='whether to ignore cache')
+    parser.add_argument('--challenge')
     args = parser.parse_args()
     return args
 
@@ -132,14 +133,37 @@ def main():
         # print("{} Mean Class Accuracy = {:.02f}".format(name,mean_acc * 100))
         print("{} Top-1 Accuracy = {:.02f}".format(name,top1 * 100))
         print("{} Top-5 Accuracy = {:.02f}".format(name,top5 * 100))
+    def convert_json(results):
+        action_ids = [x.strip().split(',')[0] for x in open(cfg.data.test.ann_file)]
+        assert len(action_ids) == len(results)
+        final_dict = dict()
+        final_dict.update(dict(
+            version="0.1",
+            challenge="action_recognition"
+        ))
+        results_dict = dict()
+        for action_id,res in zip(action_ids, results):
+            noun, verb = results
+            noun = noun.mean(axis=0)
+            verb = verb.mean(axis=0)
+            noun_re = dict(zip(map(str, list(range(len(noun)))),noun.to_list()))
+            verb_re = dict(zip(map(str, list(range(len(verb)))),verb.to_list()))
+            results_dict.update(noun=noun_re,
+                                verb=verb_re)
+        final_dict.update(results=results_dict)
+        mmcv.dump(final_dict, 'test.json')
+
+
 
     get_noun = lambda x:x[0]
     get_verb = lambda x:x[1]
     noun_output = list(map(get_noun,outputs))
     verb_output = list(map(get_verb, outputs))
+    if args.challenge:
 
-    top_acc(noun_output, gt_noun_labels,'noun')
-    top_acc(verb_output, gt_verb_labels, 'verb')
+    else:
+        top_acc(noun_output, gt_noun_labels,'noun')
+        top_acc(verb_output, gt_verb_labels, 'verb')
 
 
 
