@@ -82,7 +82,8 @@ class KitchenDataset(Dataset):
                  max_distort=1,
                  input_format='NCHW',
                  ob_time=1,
-                 an_time=1):
+                 an_time=1,
+                 with_challenge=False):
         # prefix of images path
         self.img_prefix = img_prefix
 
@@ -90,6 +91,7 @@ class KitchenDataset(Dataset):
         # load annotations
         self.ob_time = ob_time
         self.an_time = an_time
+        self.with_challenge = with_challenge
         self.video_infos = self.load_annotations(ann_file)
         # normalization config
         self.img_norm_cfg = img_norm_cfg
@@ -336,10 +338,13 @@ class KitchenDataset(Dataset):
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
                    )
-        _gt_label = dict(noun = DC(to_tensor(record.noun), stack=True,pad_dims=None),
-                        verb = DC(to_tensor(record.verb), stack=True,pad_dims=None))
+        if self.with_challenge:
+            _gt_label = dict(noun = DC(to_tensor(record.noun), stack=True,pad_dims=None),
+                            verb = DC(to_tensor(record.verb), stack=True,pad_dims=None))
 
-        data.update(dict(gt_label=_gt_label))
+            data.update(dict(gt_label=_gt_label))
+        else:
+            data.update(dict(_gt_label=None))
 
         # handle the first modality
         modality = self.modalities[0]
