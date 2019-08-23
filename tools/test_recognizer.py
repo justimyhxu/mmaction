@@ -66,6 +66,7 @@ def main():
         args.out = osp.join(cfg.work_dir,'results.pkl')
     if args.checkpoint is None:
         args.checkpoint = osp.join(cfg.work_dir, 'latest.pth')
+        print('checkpoint_path', args.checkpoint)
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
     cfg.data.test.test_mode = True
@@ -125,9 +126,10 @@ def main():
             print("Averaging score over {} clips without softmax (ie, raw)".format(
                 output[0].shape[0]))
             results = [res.mean(axis=0) for res in output]
+
         top1, top5 = top_k_accuracy(results, gt_labels, k=(1, 5))
-        mean_acc = mean_class_accuracy(results, gt_labels)
-        print("{} Mean Class Accuracy = {:.02f}".format(name,mean_acc * 100))
+        # mean_acc = mean_class_accuracy(results, gt_labels)
+        # print("{} Mean Class Accuracy = {:.02f}".format(name,mean_acc * 100))
         print("{} Top-1 Accuracy = {:.02f}".format(name,top1 * 100))
         print("{} Top-5 Accuracy = {:.02f}".format(name,top5 * 100))
 
