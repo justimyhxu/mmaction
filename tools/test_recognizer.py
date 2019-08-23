@@ -143,8 +143,8 @@ def main():
         ))
         results_dict = dict()
         for action_id,res in zip(action_ids, results):
-            action_dict = {}
-            noun, verb = results
+            # action_dict = {}
+            noun, verb = res
             noun = noun.mean(axis=0)
             verb = verb.mean(axis=0)
             noun_re = dict(zip(map(str, list(range(len(noun)))),noun.to_list()))
