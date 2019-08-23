@@ -94,7 +94,7 @@ data = dict(
         ),
     test=dict(
         type=dataset_type,
-        ann_file='data/epic-kitchen/val.txt',
+        ann_file='data/epic-kitchen/test_seen.txt',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         num_segments=25,
