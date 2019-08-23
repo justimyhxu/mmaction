@@ -338,7 +338,7 @@ class KitchenDataset(Dataset):
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
                    )
-        if self.with_challenge:
+        if not self.with_challenge:
             _gt_label = dict(noun = DC(to_tensor(record.noun), stack=True,pad_dims=None),
                             verb = DC(to_tensor(record.verb), stack=True,pad_dims=None))
 
