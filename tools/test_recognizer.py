@@ -147,8 +147,8 @@ def main():
             noun, verb = res
             noun = noun.mean(axis=0)
             verb = verb.mean(axis=0)
-            noun_re = dict(zip(map(str, list(range(len(noun)))),noun.to_list()))
-            verb_re = dict(zip(map(str, list(range(len(verb)))),verb.to_list()))
+            noun_re = dict(zip(map(str, list(range(len(noun)))),noun.tolist()))
+            verb_re = dict(zip(map(str, list(range(len(verb)))),verb.tolist()))
             results_dict.update(action_id=dict(noun=noun_re,
                                 verb=verb_re))
         final_dict.update(results=results_dict)
