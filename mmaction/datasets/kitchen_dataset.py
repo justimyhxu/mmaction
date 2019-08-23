@@ -344,7 +344,7 @@ class KitchenDataset(Dataset):
 
             data.update(dict(gt_label=_gt_label))
         else:
-            data.update(dict(gt_label=None))
+            data.update(dict(gt_label=[]))
 
         # handle the first modality
         modality = self.modalities[0]
