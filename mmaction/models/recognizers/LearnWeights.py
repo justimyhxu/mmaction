@@ -4,7 +4,7 @@ from torch.nn.parameter import Parameter
 
 class LearnWeights(nn.Module):
     def __init__(self):
-        super(LearnWeights).__init__()
+        super(LearnWeights, self).__init__()
         self.lmd1 = Parameter(torch.zeros(1)*1.0, requires_grad=True)
         self.lmd2 = Parameter(torch.zeros(1)*1.0, requires_grad=True)
     def forward(self, loss1, loss2):
