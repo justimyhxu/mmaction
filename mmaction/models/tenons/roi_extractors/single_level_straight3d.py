@@ -77,7 +77,7 @@ class SingleRoIStraight3DExtractor(nn.Module):
                 # feats[0] = torch.mean(feats[0], 2, keepdim=True)
                 bs, c, t, h, w = feats[0].shape
                 swap = t // 2
-                feats[0] = feats[0][:,:,int(swap):int(swap)+1,..]
+                feats[0] = feats[0][:,:,int(swap):int(swap)+1,...]
             roi_feats = []
             for t in range(feats[0].size(2)):
                 feat = feats[0][:, :, t, :, :].contiguous()
