@@ -2,7 +2,7 @@ import torch.nn as nn
 from .base import BaseRecognizer
 from .. import builder
 from ..registry import RECOGNIZERS
-
+from .LearnWeights import LearnWeights
 
 @RECOGNIZERS.register_module
 class TSN2D(BaseRecognizer):
@@ -23,7 +23,7 @@ class TSN2D(BaseRecognizer):
         self.backbone = builder.build_backbone(backbone)
         self.modality = modality
         self.in_channels = in_channels
-
+        self.LRW = LearnWeights()
         if spatial_temporal_module is not None:
             self.spatial_temporal_module = builder.build_spatial_temporal_module(
                 spatial_temporal_module)
@@ -143,14 +143,20 @@ class TSN2D(BaseRecognizer):
             noun_cls_score = self.noun_cls_head(x)
             noun_gt_label = gt_label['noun'].squeeze()
             loss_score_noun = self.noun_cls_head.loss(noun_cls_score, noun_gt_label, name='noun_cls_loss')
-            losses.update(loss_score_noun)
+            # losses.update(loss_score_noun)
+            losses.update(dict(noun_cls=loss_score_noun))
 
         if self.with_noun_head:
             verb_cls_score = self.verb_cls_head(x)
             verb_gt_label = gt_label['verb'].squeeze()
             loss_score_verb = self.verb_cls_head.loss(verb_cls_score, verb_gt_label, name='verb_cls_loss')
-            losses.update(loss_score_verb)
+            # losses.update(loss_score_verb)
+            losses.update(dict(verb_cls=loss_score_verb))
 
+        loss = self.LRW(loss_score_noun,loss_score_verb)
+        losses.update(dict(noun_lmd=self.LRW.lmd1))
+        losses.update(dict(verb_lmd=self.LRW.lmd2))
+        losses.update(dict(noun_verb_cls_loss=loss))
 
         return losses
 

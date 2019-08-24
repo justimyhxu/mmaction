@@ -57,7 +57,6 @@ class ClsHead(nn.Module):
     def loss(self,
              cls_score,
              labels, name):
-        losses = dict()
-        losses[name] = F.cross_entropy(cls_score, labels)
-
-        return losses
+        return F.cross_entropy(cls_score, labels)
+        #
+        # return losses
