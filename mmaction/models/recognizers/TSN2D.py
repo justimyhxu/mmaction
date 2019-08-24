@@ -17,13 +17,17 @@ class TSN2D(BaseRecognizer):
                  train_cfg=None,
                  test_cfg=None,
                  verb_cls_head=None,
-                 noun_cls_head=None):
+                 noun_cls_head=None,
+                 with_LRW=False):
 
         super(TSN2D, self).__init__()
         self.backbone = builder.build_backbone(backbone)
         self.modality = modality
         self.in_channels = in_channels
-        self.LRW = LearnWeights()
+        self.with_LRW = with_LRW
+        if self.with_LRW:
+            self.LRW = LearnWeights()
+
         if spatial_temporal_module is not None:
             self.spatial_temporal_module = builder.build_spatial_temporal_module(
                 spatial_temporal_module)
@@ -144,19 +148,25 @@ class TSN2D(BaseRecognizer):
             noun_gt_label = gt_label['noun'].squeeze()
             loss_score_noun = self.noun_cls_head.loss(noun_cls_score, noun_gt_label, name='noun_cls_loss')
             # losses.update(loss_score_noun)
-            losses.update(dict(noun_cls=loss_score_noun))
+
 
         if self.with_noun_head:
             verb_cls_score = self.verb_cls_head(x)
             verb_gt_label = gt_label['verb'].squeeze()
             loss_score_verb = self.verb_cls_head.loss(verb_cls_score, verb_gt_label, name='verb_cls_loss')
             # losses.update(loss_score_verb)
-            losses.update(dict(verb_cls=loss_score_verb))
 
-        loss = self.LRW(loss_score_noun,loss_score_verb)
-        losses.update(dict(noun_lmd=self.LRW.lmd1))
-        losses.update(dict(verb_lmd=self.LRW.lmd2))
-        losses.update(dict(noun_verb_cls_loss=loss))
+        if self.with_LRW:
+            losses.update(dict(noun_cls_socre=loss_score_noun))
+            losses.update(dict(verb_cls_score=loss_score_verb))
+            loss = self.LRW(loss_score_noun,loss_score_verb)
+            losses.update(dict(noun_lmd=self.LRW.lmd1))
+            losses.update(dict(verb_lmd=self.LRW.lmd2))
+            losses.update(dict(noun_verb_cls_loss=loss))
+        else:
+            losses.update(dict(noun_cls_loss=loss_score_noun))
+            losses.update(dict(verb_cls_loss=loss_score_verb))
+
 
         return losses
 
