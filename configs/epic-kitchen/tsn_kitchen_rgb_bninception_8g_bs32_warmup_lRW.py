@@ -141,7 +141,7 @@ log_config = dict(
 total_epochs = 80
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/tsn_kitchen_rgb_bninception_8g_bs32_warmup'
+work_dir = './work_dirs/tsn_kitchen_rgb_bninception_8g_bs32_warmup_LRW'
 load_from = None
 resume_from = None
 
