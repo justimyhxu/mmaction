@@ -122,7 +122,7 @@ optimizer_config = dict(grad_clip=dict(max_norm=40, norm_type=2))
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=20,
+    warmup_iters=100,
     warmup_ratio=1.0,
     step=[30, 60])
 checkpoint_config = dict(interval=1)
@@ -130,7 +130,7 @@ checkpoint_config = dict(interval=1)
 workflow = [('train', 1)]
 # yapf:disable
 log_config = dict(
-    interval=20,
+    interval=10,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
