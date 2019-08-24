@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.Parameter as Parameter
+from torch.nn.parameter import Parameter
 
 class LearnWeights(nn.Module):
     def __init__(self):
