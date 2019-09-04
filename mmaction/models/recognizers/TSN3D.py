@@ -3,7 +3,7 @@ from .. import builder
 from ..registry import RECOGNIZERS
 
 import torch
-
+import torch.nn.functional as F
 
 @RECOGNIZERS.register_module
 class TSN3D(BaseRecognizer):
@@ -213,10 +213,17 @@ class TSN3D(BaseRecognizer):
                                             ssim_backward, smooth_backward,
                                             direction='backward'))
         if self.with_cls_head:
-            cls_score = self.cls_head(x)
-            gt_label = gt_label.squeeze()
-            loss_cls = self.cls_head.loss(cls_score, gt_label)
-            losses.update(loss_cls)
+            verb_cls_score, noun_cls_score = self.cls_head(x)
+            noun_gt_label = gt_label['noun'].squeeze()
+            verb_gt_label = gt_label['verb'].squeeze()
+            loss_noun = F.cross_entropy(noun_cls_score, noun_gt_label)
+            loss_verb = F.cross_entropy(verb_cls_score, verb_gt_label)
+            losses.update(dict(noun_cls_loss=loss_noun))
+            losses.update(dict(verb_cls_loss=loss_verb))
+            # cls_score = self.cls_head(x)
+            # gt_label = gt_label.squeeze()
+            # loss_cls = self.cls_head.loss(cls_score, gt_label)
+            # losses.update(loss_cls)
 
         return losses
 
@@ -300,6 +307,6 @@ class TSN3D(BaseRecognizer):
             x = self.segmental_consensus(x)
             x = x.squeeze(1)
         if self.with_cls_head:
-            x = self.cls_head(x)
+            verb, noun = self.cls_head(x)
 
-        return x.cpu().numpy()
+        return noun.cpu().numpy(), verb.cpu().numpy()

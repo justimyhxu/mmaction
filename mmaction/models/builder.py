@@ -12,6 +12,7 @@ def _build_module(cfg, registry, default_args):
     assert isinstance(default_args, dict) or default_args is None
     args = cfg.copy()
     obj_type = args.pop('type')
+    # print(obj_type)
     if mmcv.is_str(obj_type):
         if obj_type not in registry.module_dict:
             raise KeyError('{} is not in the {} registry'.format(
@@ -23,6 +24,7 @@ def _build_module(cfg, registry, default_args):
     if default_args is not None:
         for name, value in default_args.items():
             args.setdefault(name, value)
+    # print(args, obj_type)
     return obj_type(**args)
 
 

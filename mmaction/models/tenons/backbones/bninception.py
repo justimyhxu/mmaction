@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import constant_init, kaiming_init
 from mmcv.runner import load_checkpoint
-
+from mmaction.utils.load_checkpoint import _load_checkpoint
 from ...registry import BACKBONES
 
 
@@ -15,15 +15,18 @@ class BNInception(nn.Module):
 
     def __init__(self, 
                  pretrained=None,
+                 resume_pretrained=None,
                  bn_eval=True,
+                 all_frozen=False,
                  bn_frozen=False,
                  partial_bn=False):
         super(BNInception, self).__init__()
-
+        self.all_frozen = all_frozen
         self.pretrained = pretrained
         self.bn_eval = bn_eval
         self.bn_frozen = bn_frozen
         self.partial_bn = partial_bn
+        self.resume_pretrained = resume_pretrained
 
         inplace = True
         self.conv1_7x7_s2 = nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3))
@@ -250,7 +253,10 @@ class BNInception(nn.Module):
     def init_weights(self):
         if isinstance(self.pretrained, str):
             logger = logging.getLogger()
-            load_checkpoint(self, self.pretrained, strict=False, logger=logger)
+            load_checkpoint(self, self.pretrained, strict=False, logger=logger,)
+        if isinstance(self.resume_pretrained, str):
+            logger = logging.getLogger()
+            _load_checkpoint(self, self.resume_pretrained, strict=False, logger=logger, pre_type='backbone')
         elif self.pretrained is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
@@ -510,4 +516,12 @@ class BNInception(nn.Module):
                     m.eval()
                     m.weight.requires_grad = False
                     m.bias.requires_grad = False
+        if mode and self.all_frozen:
+            for m in self.modules():
+                m.eval()
+                for params in m.parameters():
+                    params.requires_grad = False
+
+
+
 

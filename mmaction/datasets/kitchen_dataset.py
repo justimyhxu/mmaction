@@ -10,22 +10,28 @@ import lintel
 _FPS = 60
 
 class RawFramesRecord(object):
-    def __init__(self, row, ob_time, an_time):
+    def __init__(self, row, ob_time, an_time, AT=True):
         self._data = row
         self.ob_frame = ob_time*_FPS
         self.an_frame = an_time*_FPS
+        self.AT = AT
+        # print('self.AT',self.AT)
     @property
     def path(self):
         return self._data[0].strip()
 
     @property
     def start_frame(self):
-        return int(self._data[1])*2- self.ob_frame - self.an_frame
-
+        if self.AT:
+            return int(self._data[1])*2- self.ob_frame - self.an_frame
+        else:
+            return int(self._data[1])*2
     @property
     def end_frame(self):
-        return int(self._data[2])*2- self.an_frame
-
+        if self.AT:
+            return int(self._data[1])*2- self.an_frame
+        else:
+            return int(self._data[2])*2
     @property
     def verb(self):
         try:
@@ -48,8 +54,10 @@ class RawFramesRecord(object):
 
     @property
     def num_frames(self):
-        return self.end_frame - self.start_frame + 1
-
+        if self.AT:
+            return self.ob_frame
+        else:
+            return self.end_frame-self.start_frame
 
 class KitchenDataset(Dataset):
     def __init__(self,
@@ -83,10 +91,12 @@ class KitchenDataset(Dataset):
                  input_format='NCHW',
                  ob_time=1,
                  an_time=1,
-                 with_challenge=False):
+                 with_challenge=False,
+                 with_pos_encoding=False,
+                 with_AT=True):
         # prefix of images path
         self.img_prefix = img_prefix
-
+        self.with_AT = with_AT
         self.vid_dict = {}
         # load annotations
         self.ob_time = ob_time
@@ -108,7 +118,7 @@ class KitchenDataset(Dataset):
         self.random_shift = random_shift
         # whether to temporally jitter if new_step > 1
         self.temporal_jitter = temporal_jitter
-
+        self.with_pos_encoding = with_pos_encoding
         # parameters for modalities
         if isinstance(modality, (list, tuple)):
             self.modalities = modality
@@ -137,6 +147,7 @@ class KitchenDataset(Dataset):
         # network input size
         if isinstance(input_size, int):
             input_size = (input_size, input_size)
+
         self.input_size = input_size
 
         # parameters for specification from pre-trained networks (lecacy issue)
@@ -175,7 +186,7 @@ class KitchenDataset(Dataset):
         return len(self.video_infos)
 
     def load_annotations(self, ann_file):
-        return [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time) for x in open(ann_file)]
+        return [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for x in open(ann_file)]
         # return mmcv.load(ann_file)
 
     def load_proposals(self, proposal_file):
@@ -235,6 +246,7 @@ class KitchenDataset(Dataset):
             # print('img_path', img_path)
             return [mmcv.imread(img_path)]
 
+
         elif modality == 'Flow':
             x_imgs = mmcv.imread(
                 osp.join(directory, image_tmpl.format('x', idx)),
@@ -274,7 +286,7 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, skip_offsets  # frame index starts from 1
+        return record.start_frame + offsets + 1, offsets, skip_offsets  # frame index starts from 1
 
     def _get_val_indices(self, record):
         if record.num_frames > self.num_segments + self.old_length - 1:
@@ -290,7 +302,7 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, skip_offsets
+        return record.start_frame + offsets + 1, offsets, skip_offsets
 
     def _get_test_indices(self, record):
         if record.num_frames > self.old_length - 1:
@@ -306,7 +318,7 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, skip_offsets
+        return record.start_frame + offsets + 1, offsets, skip_offsets
 
     def _get_frames(self, record, image_tmpl, modality, indices, skip_offsets):
         images = list()
@@ -331,9 +343,9 @@ class KitchenDataset(Dataset):
     def __getitem__(self, idx):
         record = self.video_infos[idx]
         if self.test_mode:
-            segment_indices, skip_offsets = self._get_test_indices(record)
+            segment_indices, pos_encoding, skip_offsets = self._get_test_indices(record)
         else:
-            segment_indices, skip_offsets = self._sample_indices(
+            segment_indices, pos_encoding, skip_offsets = self._sample_indices(
                 record) if self.random_shift else self._get_val_indices(record)
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
@@ -345,6 +357,13 @@ class KitchenDataset(Dataset):
             data.update(dict(gt_label=_gt_label))
         else:
             data.update(dict(gt_label=[]))
+
+        if self.with_pos_encoding:
+            pos = np.zeros((len(pos_encoding), self.ob_time * _FPS))
+            pos_encoding[pos_encoding<0] = 0
+            pos_encoding[pos_encoding>self.ob_time*_FPS-1] = self.ob_time * _FPS
+            pos[list(range(len(pos_encoding))), pos_encoding] = 1
+            data.update(dict(pos_encode=DC(to_tensor(pos), stack=True,pad_dims=None)))
 
         # handle the first modality
         modality = self.modalities[0]

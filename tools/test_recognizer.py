@@ -82,6 +82,7 @@ def main():
         if args.gpus == 1:
             model = build_recognizer(
                 cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
+            # print('CCCCCCC!!!!')
             load_checkpoint(model, args.checkpoint, strict=True)
             model = MMDataParallel(model, device_ids=[0])
 

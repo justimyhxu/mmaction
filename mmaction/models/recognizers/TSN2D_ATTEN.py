@@ -3,10 +3,11 @@ from .base import BaseRecognizer
 from .. import builder
 from ..registry import RECOGNIZERS
 from .LearnWeights import LearnWeights
+from .EncodePosition import EncodePosition
 import torch.nn.functional as F
 
 @RECOGNIZERS.register_module
-class TSN2D(BaseRecognizer):
+class TSN2D_ATTEN(BaseRecognizer):
 
     def __init__(self,
                  backbone,
@@ -17,11 +18,15 @@ class TSN2D(BaseRecognizer):
                  cls_head=None,
                  train_cfg=None,
                  test_cfg=None,
+                 verb_encode=None,
+                 noun_encode=None,
+                 verb_segmental_consensus=None,
+                 noun_segmental_consensus=None,
                  verb_cls_head=None,
                  noun_cls_head=None,
                  with_LRW=False):
 
-        super(TSN2D, self).__init__()
+        super(TSN2D_ATTEN, self).__init__()
         self.backbone = builder.build_backbone(backbone)
         self.modality = modality
         self.in_channels = in_channels
@@ -29,21 +34,30 @@ class TSN2D(BaseRecognizer):
         if self.with_LRW:
             self.LRW = LearnWeights()
 
+        if verb_encode is not None:
+            self.verb_encode = EncodePosition(in_dim = 60, h_dim=512, num_classes=125)
+        if noun_encode is not None:
+            self.noun_encode = EncodePosition(in_dim = 60, h_dim=512, num_classes=352)
+
         if spatial_temporal_module is not None:
             self.spatial_temporal_module = builder.build_spatial_temporal_module(
                 spatial_temporal_module)
         else:
-            raise NotImplementedError
+            pass
 
         if segmental_consensus is not None:
             self.segmental_consensus = builder.build_segmental_consensus(
                 segmental_consensus)
         else:
-            raise NotImplementedError
+            pass
+        if verb_segmental_consensus is not None:
+            self.verb_segmental_consensus = builder.build_segmental_consensus(verb_segmental_consensus)
+
+        if noun_segmental_consensus is not None:
+            self.noun_segmental_consensus = builder.build_segmental_consensus(noun_segmental_consensus)
 
         if cls_head is not None:
             self.cls_head = builder.build_head(cls_head)
-
         if verb_cls_head is not None:
             self.verb_cls_head = builder.build_head(verb_cls_head)
         if noun_cls_head is not None:
@@ -61,6 +75,8 @@ class TSN2D(BaseRecognizer):
         if modality == 'Flow' or modality == 'RGBDiff':
             self._construct_2d_backbone_conv1(in_channels)
 
+
+
     @property
     def with_spatial_temporal_module(self):
         return hasattr(self, 'spatial_temporal_module') and self.spatial_temporal_module is not None
@@ -68,7 +84,12 @@ class TSN2D(BaseRecognizer):
     @property
     def with_segmental_consensus(self):
         return hasattr(self, 'segmental_consensus') and self.segmental_consensus is not None
-
+    @property
+    def with_noun_segmental_consensus(self):
+        return hasattr(self, 'noun_segmental_consensus') and self.noun_segmental_consensus is not None
+    @property
+    def with_verb_segmental_consensus(self):
+        return hasattr(self, 'verb_segmental_consensus') and self.verb_segmental_consensus is not None
     @property
     def with_cls_head(self):
         return hasattr(self, 'cls_head') and self.cls_head is not None
@@ -79,6 +100,13 @@ class TSN2D(BaseRecognizer):
     @property
     def with_noun_head(self):
         return hasattr(self, 'noun_cls_head') and self.noun_cls_head is not None
+    @property
+    def with_encode_verb(self):
+        return hasattr(self, 'verb_encode') and self.verb_encode is not None
+    @property
+    def with_encode_noun(self):
+        return hasattr(self, 'noun_encode') and self.noun_encode is not None
+
 
     def _construct_2d_backbone_conv1(self, in_channels):
         modules = list(self.backbone.modules())
@@ -104,7 +132,7 @@ class TSN2D(BaseRecognizer):
         setattr(container, layer_name, new_conv_layer)
 
     def init_weights(self):
-        super(TSN2D, self).init_weights()
+        super(TSN2D_ATTEN, self).init_weights()
         self.backbone.init_weights()
 
         if self.with_spatial_temporal_module:
@@ -113,11 +141,13 @@ class TSN2D(BaseRecognizer):
         if self.with_segmental_consensus:
             self.segmental_consensus.init_weights()
 
+        if self.with_noun_segmental_consensus:
+            self.noun_segmental_consensus.init_weights()
+
+        if self.with_verb_segmental_consensus:
+            self.verb_segmental_consensus.init_weights()
         if self.with_cls_head:
             self.cls_head.init_weights()
-
-    # def load_checkpoint(self):
-
 
     def extract_feat(self, img_group):
         x = self.backbone(img_group)
@@ -130,6 +160,7 @@ class TSN2D(BaseRecognizer):
                       **kwargs):
         assert num_modalities == 1
         img_group = kwargs['img_group_0']
+        pos_encode = kwargs['pos_encode']
 
         bs = img_group.shape[0]
         img_group = img_group.reshape(
@@ -139,49 +170,65 @@ class TSN2D(BaseRecognizer):
         x = self.extract_feat(img_group)
         if self.with_spatial_temporal_module:
             x = self.spatial_temporal_module(x)
-        x = x.reshape((-1, num_seg) + x.shape[1:])
-        if self.with_segmental_consensus:
-            x = self.segmental_consensus(x)
-            x = x.squeeze(1)
+        # x = x.reshape((-1, num_seg) + x.shape[1:])
+        # if self.with_segmental_consensus:
+        #     x = self.segmental_consensus(x)
+        #     x = x.squeeze(1)
         losses = dict()
         if self.with_cls_head:
             verb_cls_score, noun_cls_score = self.cls_head(x)
+            noun_cls_score_logit = noun_cls_score.reshape((-1, num_seg) + noun_cls_score.shape[1:])
+            verb_cls_score_logit = verb_cls_score.reshape((-1, num_seg)+verb_cls_score.shape[1:])
+
+            noun_init_logit, noun_final_logit = self.noun_segmental_consensus(pos_encode, noun_cls_score_logit)
+            verb_init_logit, verb_final_logit = self.verb_segmental_consensus(pos_encode, verb_cls_score_logit)
+
             noun_gt_label = gt_label['noun'].squeeze()
             verb_gt_label = gt_label['verb'].squeeze()
-            loss_noun = F.cross_entropy(noun_cls_score, noun_gt_label)
-            loss_verb = F.cross_entropy(verb_cls_score, verb_gt_label)
-            # losses.update(dict(loss_noun=loss_noun,loss_verb=loss_verb))
-
+            loss_score_noun = F.cross_entropy(noun_init_logit, noun_gt_label)
+            loss_score_verb = F.cross_entropy(verb_init_logit, verb_gt_label)
+            # print('ccccc')
         if self.with_noun_head:
             noun_cls_score = self.noun_cls_head(x)
+            noun_cls_score_logit = noun_cls_score.reshape((-1, num_seg)+noun_cls_score.shape[1:])
+            # noun_cls_score = noun_cls_score_logit.mean(dim=1)
+            noun_init_logit, noun_final_logit = self.noun_segmental_consensus(pos_encode, noun_cls_score_logit)
             noun_gt_label = gt_label['noun'].squeeze()
-            loss_noun = self.noun_cls_head.loss(noun_cls_score, noun_gt_label, name='noun_cls_loss')
+            loss_score_noun = self.noun_cls_head.loss(noun_init_logit, noun_gt_label, name='noun_cls_loss')
+            # noun_logit = loss_score_noun.reshape((-1, num_seg)+loss_score_noun.shpae[1:])
             # losses.update(loss_score_noun)
 
-        if self.with_noun_head:
+
+        if self.with_verb_head:
             verb_cls_score = self.verb_cls_head(x)
+            verb_cls_score_logit = verb_cls_score.reshape((-1, num_seg)+verb_cls_score.shape[1:])
+            # verb_cls_score = verb_cls_score_logit.mean(dim=1)
+            verb_init_logit, verb_final_logit = self.verb_segmental_consensus(pos_encode, verb_cls_score_logit)
             verb_gt_label = gt_label['verb'].squeeze()
-            loss_verb = self.verb_cls_head.loss(verb_cls_score, verb_gt_label, name='verb_cls_loss')
+            loss_score_verb = self.verb_cls_head.loss(verb_init_logit, verb_gt_label, name='verb_cls_loss')
+            # verb_logit = loss_score_verb.reshape((-1, num_seg)+loss_score_verb.shape[1:])
             # losses.update(loss_score_verb)
 
+
         if self.with_LRW:
-            losses.update(dict(noun_cls_socre=loss_noun))
-            losses.update(dict(verb_cls_score=loss_verb))
-            loss = self.LRW(loss_noun,loss_verb)
+            losses.update(dict(noun_cls_socre=loss_score_noun))
+            losses.update(dict(verb_cls_score=loss_score_verb))
+            loss = self.LRW(loss_score_noun,loss_score_verb)
             losses.update(dict(noun_lmd=self.LRW.lmd1))
             losses.update(dict(verb_lmd=self.LRW.lmd2))
             losses.update(dict(noun_verb_cls_loss=loss))
         else:
-            losses.update(dict(noun_cls_loss=loss_noun))
-            losses.update(dict(verb_cls_loss=loss_verb))
-
+            losses.update(dict(noun_cls_loss=loss_score_noun))
+            losses.update(dict(verb_cls_loss=loss_score_verb))
 
         return losses
+    # def load_checkpoint(self):
 
     def forward_test(self,
                      num_modalities,
                      img_meta,
                      **kwargs):
+
         assert num_modalities == 1
         img_group = kwargs['img_group_0']
 
@@ -193,14 +240,19 @@ class TSN2D(BaseRecognizer):
         x = self.extract_feat(img_group)
         if self.with_spatial_temporal_module:
             x = self.spatial_temporal_module(x)
-        x = x.reshape((-1, num_seg) + x.shape[1:])
-        if self.with_segmental_consensus:
-            x = self.segmental_consensus(x)
-            x = x.squeeze(1)
+        # x = x.reshape((-1, num_seg) + x.shape[1:])
+        # if self.with_segmental_consensus:
+        #     x = self.segmental_consensus(x)
+        #     x = x.squeeze(1)
         if self.with_cls_head:
             verb, noun = self.cls_head(x)
+            noun = noun.reshape((-1, num_seg)+noun.shape[1:])
+            verb = verb.reshape((-1, num_seg)+verb.shape[1:])
+            noun, noun_final_logit = self.noun_segmental_consensus(None, noun)
+            verb, verb_final_logit = self.verb_segmental_consensus(None, verb)
         if self.with_noun_head:
             noun = self.noun_cls_head(x)
+
         if self.with_verb_head:
             verb = self.verb_cls_head(x)
 
