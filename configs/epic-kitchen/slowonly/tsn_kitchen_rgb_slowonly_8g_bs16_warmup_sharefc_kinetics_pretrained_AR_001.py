@@ -4,7 +4,7 @@ model = dict(
     type='TSN3D',
     backbone=dict(
         type='ResNet_SlowFast',
-        pretrained=None,
+        pretrained='work_dirs/tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_ar_pretrained_no_frozen/backbone.pth',
         pretrained2d=False,
         depth=50,
         num_stages=4,
@@ -50,11 +50,11 @@ img_norm_cfg = dict(
 
 data = dict(
     videos_per_gpu=16,
-    workers_per_gpu=8,
+    workers_per_gpu=0,
     two_head=True,
     train=dict(
         type=dataset_type,
-        ann_file='data/epic-kitchen/debug_train.txt',
+        ann_file='data/epic-kitchen/train.txt',
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
         input_format="NCTHW",
@@ -142,17 +142,17 @@ checkpoint_config = dict(interval=1)
 workflow = [('train', 1)]
 # yapf:disable
 log_config = dict(
-    interval=1,
+    interval=10,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 1
+total_epochs = 80
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_kinetics_pretrained_AT'
+work_dir = './work_dirs/tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_ar_pretrained_no_frozen'
 load_from = None
 resume_from = None
 
