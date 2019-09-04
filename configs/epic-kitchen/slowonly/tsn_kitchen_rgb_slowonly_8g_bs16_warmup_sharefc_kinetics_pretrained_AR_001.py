@@ -152,7 +152,7 @@ log_config = dict(
 total_epochs = 80
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = 'tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_kinetics_pretrained_AR_001'
+work_dir = './work_dirs/tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_kinetics_pretrained_AR_001'
 load_from = None
 resume_from = None
 
