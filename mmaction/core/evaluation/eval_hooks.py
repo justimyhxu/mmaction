@@ -90,23 +90,51 @@ class DistEvalTopKAccuracyHook(DistEvalHook):
 
     def __init__(self,
                  dataset,
-                 k=(1,)):
+                 k=(1,),
+                 two_head=True):
         super(DistEvalTopKAccuracyHook, self).__init__(dataset)
         self.k = k
+        self.two_head = two_head
 
     def evaluate(self, runner, results):
-        gt_labels = []
-        for i in range(len(self.dataset)):
-            ann = self.dataset.get_ann_info(i)
-            gt_labels.append(ann['label'])
+        if not self.two_head:
+            gt_labels = []
+            for i in range(len(self.dataset)):
+                ann = self.dataset.get_ann_info(i)
+                gt_labels.append(ann['label'])
 
-        results = [res.squeeze() for res in results]
-        top1, top5 = top_k_accuracy(results, gt_labels, k=self.k)
-        runner.mode = 'val'
-        runner.log_buffer.output['top1 acc'] = top1
-        runner.log_buffer.output['top5 acc'] = top5
-        runner.log_buffer.ready = True
+            results = [res.squeeze() for res in results]
+            top1, top5 = top_k_accuracy(results, gt_labels, k=self.k)
+            runner.mode = 'val'
+            runner.log_buffer.output['top1_acc'] = top1
+            runner.log_buffer.output['top5_acc'] = top5
+            runner.log_buffer.ready = True
+        else:
+            gt_noun_labels = []
+            gt_verb_labels = []
+            for i in range(len(self.dataset)):
+                ann = self.dataset.get_ann_info(i)
+                gt_noun_labels.append(ann['noun_label'])
+                gt_verb_labels.append(ann['verb_label'])
 
+            get_noun = lambda x: x[0].squeeze()
+            get_verb = lambda x: x[1].squeeze()
+            noun_output = list(map(get_noun, results))
+            verb_output = list(map(get_verb, results))
+
+            noun_top1, noun_top5 = top_k_accuracy(noun_output, gt_noun_labels, k=self.k)
+            verb_top1, verb_top5 = top_k_accuracy(verb_output, gt_verb_labels, k=self.k)
+
+            runner.mode = 'val'
+            runner.log_buffer.output['noun_top1_acc'] = noun_top1
+            runner.log_buffer.output['noun_top5_acc'] = noun_top5
+
+            runner.log_buffer.output['verb_top1_acc'] = verb_top1
+            runner.log_buffer.output['verb_top5_acc'] = verb_top5
+            runner.log_buffer.ready = True
+
+
+# class DistEvalTopKAccuracyHook(DistEvalHook)
 
 class AVADistEvalmAPHook(DistEvalHook):
 

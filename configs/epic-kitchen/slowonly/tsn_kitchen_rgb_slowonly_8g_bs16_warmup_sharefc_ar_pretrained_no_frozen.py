@@ -17,7 +17,7 @@ model = dict(
         pool1_kernel_t=1,
         pool1_stride_t=1,
         bn_eval=False,
-        partial_bn=False,
+        partial_bn=True,
         style='pytorch'),
     spatial_temporal_module=dict(
         type='SimpleSpatialTemporalModule',
@@ -51,6 +51,7 @@ img_norm_cfg = dict(
 data = dict(
     videos_per_gpu=16,
     workers_per_gpu=8,
+    two_head=True,
     train=dict(
         type=dataset_type,
         ann_file='data/epic-kitchen/train.txt',
@@ -99,7 +100,7 @@ data = dict(
         more_fix_crop=False,
         multiscale_crop=False,
         test_mode=False,
-        ob_time = 1,
+        ob_time = 1.5,
         an_time = 1,
         ),
     test=dict(
@@ -115,7 +116,7 @@ data = dict(
         modality='RGB',
         image_tmpl='frame_{:010d}.jpg',
         img_scale=256,
-        input_size=224,
+        input_size=256,
         div_255=False,
         flip_ratio=0,
         resize_keep_ratio=True,
@@ -141,10 +142,10 @@ checkpoint_config = dict(interval=1)
 workflow = [('train', 1)]
 # yapf:disable
 log_config = dict(
-    interval=20,
+    interval=10,
     hooks=[
         dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
+        dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
 # runtime settings

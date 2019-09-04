@@ -80,9 +80,9 @@ def _dist_train(model, dataset, cfg, validate=False):
     runner.register_hook(DistSamplerSeedHook())
     # register eval hooks
     if validate:
-        if cfg.data.val.type in ['RawFramesDataset', 'VideoDataset']:
+        if cfg.data.val.type in ['RawFramesDataset', 'VideoDataset', 'KitchenDataset']:
             runner.register_hook(
-                DistEvalTopKAccuracyHook(cfg.data.val, k=(1, 5)))
+                DistEvalTopKAccuracyHook(cfg.data.val, k=(1, 5), two_head=cfg.data.two_head))
         if cfg.data.val.type == 'AVADataset':
             runner.register_hook(AVADistEvalmAPHook(cfg.data.val))
     # if validate:
