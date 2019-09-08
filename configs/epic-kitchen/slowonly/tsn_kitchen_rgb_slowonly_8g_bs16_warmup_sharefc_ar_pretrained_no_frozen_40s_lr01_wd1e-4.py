@@ -24,6 +24,7 @@ model = dict(
         spatial_type='avg',
         temporal_size=8,
         spatial_size=7),
+    
     segmental_consensus=dict(
         type='SimpleConsensus',
         consensus_type='avg'),
