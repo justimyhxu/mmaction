@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from .transforms import (GroupImageTransform)
 from .utils import to_tensor
 import lintel
+# from itertools import chain
 _FPS = 60
 
 class RawFramesRecord(object):
@@ -186,9 +187,12 @@ class KitchenDataset(Dataset):
         return len(self.video_infos)
 
     def load_annotations(self, ann_file):
-        return [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for x in open(ann_file)]
+        if isinstance(self.an_time, list):
+            ann_list = [[RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for an_time in self.an_time] for x in open(ann_file)]
+        else:
+            ann_list = [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for x in open(ann_file)]
         # return mmcv.load(ann_file)
-
+        return ann_list
     def load_proposals(self, proposal_file):
         return mmcv.load(proposal_file)
 
