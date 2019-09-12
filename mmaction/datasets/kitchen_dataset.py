@@ -13,6 +13,7 @@ _FPS = 60
 class RawFramesRecord(object):
     def __init__(self, row, ob_time, an_time, AT=True):
         self._data = row
+        self.an_time = an_time
         self.ob_frame = ob_time*_FPS
         self.an_frame = an_time*_FPS
         self.AT = AT
@@ -103,6 +104,10 @@ class KitchenDataset(Dataset):
         self.ob_time = ob_time
         self.an_time = an_time
         self.with_challenge = with_challenge
+        # test mode or not
+        self.test_mode = test_mode
+        # whether to temporally random shift when training
+        self.random_shift = random_shift
         self.video_infos = self.load_annotations(ann_file)
         # normalization config
         self.img_norm_cfg = img_norm_cfg
@@ -115,11 +120,11 @@ class KitchenDataset(Dataset):
         self.new_length = new_length
         # number of steps (sparse sampling for efficiency of io)
         self.new_step = new_step
-        # whether to temporally random shift when training
-        self.random_shift = random_shift
+
         # whether to temporally jitter if new_step > 1
         self.temporal_jitter = temporal_jitter
         self.with_pos_encoding = with_pos_encoding
+
         # parameters for modalities
         if isinstance(modality, (list, tuple)):
             self.modalities = modality
@@ -159,8 +164,7 @@ class KitchenDataset(Dataset):
         self.flip_ratio = flip_ratio
         self.resize_keep_ratio = resize_keep_ratio
 
-        # test mode or not
-        self.test_mode = test_mode
+
 
         # set group flag for the sampler
         if not self.test_mode:
@@ -188,7 +192,18 @@ class KitchenDataset(Dataset):
 
     def load_annotations(self, ann_file):
         if isinstance(self.an_time, list):
-            ann_list = [[RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for an_time in self.an_time] for x in open(ann_file)]
+            # ann_list = [[RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for an_time in self.an_time] for x in open(ann_file)]
+            # ann_list = [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for x in open(ann_file)]
+            ann_list = []
+            for x in open(ann_file):
+                import random
+                if not self.test_mode and self.random_shift:
+                    an_time = random.choice(self.an_time)
+                else:
+                    an_time = 1
+                # print(an_time)
+                ann = RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=an_time, AT=self.with_AT)
+                ann_list.append(ann)
         else:
             ann_list = [RawFramesRecord(x.strip().split(',')[1:], ob_time=self.ob_time, an_time=self.an_time, AT=self.with_AT) for x in open(ann_file)]
         # return mmcv.load(ann_file)
@@ -290,7 +305,9 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, offsets, skip_offsets  # frame index starts from 1
+        grid_offsets = np.tile(np.arange(0, self.old_length, self.new_step), (self.num_segments, 1))
+        pos_en = offsets.reshape(self.num_segments, -1) + np.tile(skip_offsets, (self.num_segments, 1)) + grid_offsets
+        return record.start_frame + offsets + 1, pos_en, skip_offsets  # frame index starts from 1
 
     def _get_val_indices(self, record):
         if record.num_frames > self.num_segments + self.old_length - 1:
@@ -306,7 +323,9 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, offsets, skip_offsets
+        grid_offsets = np.tile(np.arange(0, self.old_length, self.new_step), (self.num_segments, 1))
+        pos_en = offsets.reshape(self.num_segments, -1) + np.tile(skip_offsets, (self.num_segments, 1)) + grid_offsets
+        return record.start_frame + offsets + 1, pos_en, skip_offsets
 
     def _get_test_indices(self, record):
         if record.num_frames > self.old_length - 1:
@@ -322,7 +341,10 @@ class KitchenDataset(Dataset):
         else:
             skip_offsets = np.zeros(
                 self.old_length // self.new_step, dtype=int)
-        return record.start_frame + offsets + 1, offsets, skip_offsets
+
+        grid_offsets = np.tile(np.arange(0, self.old_length, self.new_step), (self.num_segments, 1))
+        pos_en = offsets.reshape(self.num_segments, -1) + np.tile(skip_offsets, (self.num_segments, 1)) + grid_offsets
+        return record.start_frame + offsets + 1, pos_en, skip_offsets
 
     def _get_frames(self, record, image_tmpl, modality, indices, skip_offsets):
         images = list()
@@ -347,9 +369,9 @@ class KitchenDataset(Dataset):
     def __getitem__(self, idx):
         record = self.video_infos[idx]
         if self.test_mode:
-            segment_indices, pos_encoding, skip_offsets = self._get_test_indices(record)
+            segment_indices, pos_en, skip_offsets = self._get_test_indices(record)
         else:
-            segment_indices, pos_encoding, skip_offsets = self._sample_indices(
+            segment_indices, pos_en, skip_offsets = self._sample_indices(
                 record) if self.random_shift else self._get_val_indices(record)
 
         data = dict(num_modalities=DC(to_tensor(len(self.modalities))),
@@ -363,11 +385,21 @@ class KitchenDataset(Dataset):
             data.update(dict(gt_label=[]))
 
         if self.with_pos_encoding:
-            pos = np.zeros((len(pos_encoding), self.ob_time * _FPS))
-            pos_encoding[pos_encoding<0] = 0
-            pos_encoding[pos_encoding>self.ob_time*_FPS-1] = self.ob_time * _FPS
-            pos[list(range(len(pos_encoding))), pos_encoding] = 1
-            data.update(dict(pos_encode=DC(to_tensor(pos), stack=True,pad_dims=None)))
+            an_pos = np.zeros((1, len(self.an_time)))
+            an_pos[0, self.an_time.index(record.an_time)] = 1
+            an_pos = np.tile(an_pos,(self.num_segments,1))
+            an_pos = np.asarray(an_pos, dtype='float32')
+            data.update(dict(an_en=DC(to_tensor(an_pos), stack=True, pad_dims=None)))
+
+            pos = np.zeros(pos_en.shape+(int(self.ob_time* _FPS), ))
+            pos_en[pos_en<0] = 0
+            pos_en[pos_en>self.ob_time*_FPS-1] = int(self.ob_time * _FPS)-1
+            for i in range(pos_en.shape[0]):
+                pos_en_int =  list(map(int, pos_en[i]))
+                pos[i][list(range(len(pos_en[i]))), pos_en_int] = 1
+            pos = np.asarray(pos, dtype='float32')
+            # pos[list(range(len(pos_en))), pos_en] = 1
+            data.update(dict(pos_en=DC(to_tensor(pos), stack=True,  pad_dims=None)))
 
         # handle the first modality
         modality = self.modalities[0]

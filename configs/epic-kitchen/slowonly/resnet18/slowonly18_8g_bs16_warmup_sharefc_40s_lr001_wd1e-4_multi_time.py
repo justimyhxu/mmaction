@@ -4,13 +4,13 @@ model = dict(
     type='TSN3D',
     backbone=dict(
         type='ResNet_SlowFast',
-        pretrained='work_dirs/tsn_kitchen_rgb_slowonly_8g_bs16_warmup_sharefc_ar_pretrained_no_frozen/backbone.pth',
+        pretrained='/home/yhxu/pretrain_model/resnet18_kinetics_backbone.pth',
         pretrained2d=False,
-        depth=50,
+        depth=18,
         num_stages=4,
         out_indices=[3],
         frozen_stages=-1,
-        inflate_freq=((0,0,0), (0,0,0,0), (1,1,1,1,1,1), (1,1,1)),
+        inflate_freq=((0,0), (0,0), (1,1), (1,1)),
         inflate_style='3x1x1',
         conv1_kernel_t=1,
         conv1_stride_t=1,
@@ -22,8 +22,24 @@ model = dict(
     spatial_temporal_module=dict(
         type='SimpleSpatialTemporalModule',
         spatial_type='avg',
-        temporal_size=8,
+        temporal_size=1,
         spatial_size=7),
+    an_time_embed = dict(
+        type='fc_embed_head',
+        input_dim=10,
+        hid_dim=256,
+        out_dim=256,
+        init_std=0.001,
+        zero_bn = True
+    ),
+    ob_time_embed = dict(
+        type='fc_embed_head',
+        input_dim=90,
+        hid_dim=256,
+        out_dim=256,
+        init_std=0.001,
+        zero_bn = True
+    ),
     segmental_consensus=dict(
         type='SimpleConsensus',
         consensus_type='avg'),
@@ -33,7 +49,7 @@ model = dict(
         temporal_feature_size=1,
         spatial_feature_size=1,
         dropout_ratio=0.8,
-        in_channels=2048,
+        in_channels=512,
         hid_channels=512,
         noun_num_classes=352,
         verb_num_classes=125,
@@ -77,7 +93,8 @@ data = dict(
         max_distort=1,
         test_mode=False,
         ob_time=1.5,
-        an_time=1),
+        with_pos_encoding=True,
+        an_time=[1,2,3,4,5,6,7,8,9,10]),
     val=dict(
         type=dataset_type,
         ann_file='data/epic-kitchen/val.txt',
@@ -100,8 +117,9 @@ data = dict(
         more_fix_crop=False,
         multiscale_crop=False,
         test_mode=False,
+        with_pos_encoding=True,
         ob_time = 1.5,
-        an_time = 1,
+        an_time = [1,2,3,4,5,6,7,8,9,10],
         ),
     test=dict(
         type=dataset_type,
@@ -126,9 +144,10 @@ data = dict(
         multiscale_crop=False,
         test_mode=True,
         ob_time=1.5,
-        an_time=20))
+        with_pos_encoding=True,
+        an_time=[1,2,3,4,5,6,7,8,9,10]))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=40, norm_type=2))
 # learning policy
 lr_config = dict(

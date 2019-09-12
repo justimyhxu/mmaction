@@ -13,6 +13,8 @@ class TSN3D(BaseRecognizer):
                  flownet=None,
                  spatial_temporal_module=None,
                  segmental_consensus=None,
+                 an_time_embed=None,
+                 ob_time_embed=None,
                  cls_head=None,
                  train_cfg=None,
                  test_cfg=None):
@@ -40,6 +42,15 @@ class TSN3D(BaseRecognizer):
         else:
             raise NotImplementedError
 
+        if an_time_embed is not None:
+            self.an_time_embed = builder.build_head(an_time_embed)
+        if ob_time_embed is not None:
+            self.ob_time_embed = builder.build_head(ob_time_embed)
+
+        if self.with_time_head:
+            in_dim = self.backbone.feat_dim + self.an_time_embed.out_dim + self.ob_time_embed.out_dim
+            self.conv1x1 = torch.nn.Conv1d(in_channels=in_dim, out_channels=self.backbone.feat_dim, kernel_size=1)
+            # pass
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
 
@@ -60,6 +71,11 @@ class TSN3D(BaseRecognizer):
     @property
     def with_cls_head(self):
         return hasattr(self, 'cls_head') and self.cls_head is not None
+    @property
+    def with_time_head(self):
+        with_an =  hasattr(self, 'an_time_embed') and self.an_time_embed is not None
+        with_ob = hasattr(self, 'ob_time_embed') and self.ob_time_embed is not None
+        return with_an and with_ob
 
     def init_weights(self):
         super(TSN3D, self).init_weights()
@@ -76,6 +92,10 @@ class TSN3D(BaseRecognizer):
 
         if self.with_cls_head:
             self.cls_head.init_weights()
+
+        if self.with_time_head:
+            torch.nn.init.normal_(self.conv1x1.weight, 0, 0.001)
+            torch.nn.init.constant_(self.conv1x1.bias, 0)
 
     def extract_feat_with_flow(self, img_group,
                                trajectory_forward=None,
@@ -96,10 +116,23 @@ class TSN3D(BaseRecognizer):
                       **kwargs):
         assert num_modalities == 1
         img_group = kwargs['img_group_0']
+        pos_encode = kwargs.get('pos_en', None)
+        an_encode = kwargs.get('an_en', None)
 
-        bs = img_group.shape[0]
-        img_group = img_group.reshape((-1, ) + img_group.shape[2:])
-        num_seg = img_group.shape[0] // bs
+        def re_seg_bs(tensor):
+            bs = tensor.shape[0]
+            tensor = tensor.reshape((-1, )+tensor.shape[2:])
+            num_seg = tensor.shape[0] // bs
+            return tensor, bs, num_seg
+
+        if pos_encode is not None:
+            pos_en, bs, num_seg = re_seg_bs(pos_encode)
+        if an_encode is not None:
+            an_en, bs, num_seg = re_seg_bs(an_encode)
+        img_group, bs, num_seg = re_seg_bs(img_group)
+        # bs = img_group.shape[0]
+        # img_group = img_group.reshape((-1, ) + img_group.shape[2:])
+        # num_seg = img_group.shape[0] // bs
 
         if self.with_flownet:
             if self.flownet.multiframe:
@@ -200,6 +233,17 @@ class TSN3D(BaseRecognizer):
             x = self.extract_feat(img_group)
         if self.with_spatial_temporal_module:
             x = self.spatial_temporal_module(x)
+            if x.shape[2] != 1 and self.with_time_head:
+                if len(an_en.shape) < 3:
+                    an_en = an_en.unsqueeze(1)
+                an_time_feat = self.an_time_embed(an_en)
+                pos_encode_feat = self.ob_time_embed(pos_en)
+                an_time_feat = an_time_feat.repeat((1,1, pos_encode_feat.shape[-1]))
+                x = torch.cat([x.squeeze(), an_time_feat, pos_encode_feat], dim=1)
+                x = self.conv1x1(x)
+                x = torch.mean(x,dim=-1)
+                x = x.unsqueeze(2).unsqueeze(3).unsqueeze(4)
+
         if self.with_segmental_consensus:
             x = x.reshape((-1, num_seg) + x.shape[1:])
             x = self.segmental_consensus(x)
@@ -233,11 +277,22 @@ class TSN3D(BaseRecognizer):
                      **kwargs):
         assert num_modalities == 1
         img_group = kwargs['img_group_0']
+        pos_encode = kwargs.get('pos_en', None)
+        an_encode = kwargs.get('an_en', None)
 
-        bs = img_group.shape[0]
-        img_group = img_group.reshape((-1, ) + img_group.shape[2:])
-        num_seg = img_group.shape[0] // bs
-
+        # bs = img_group.shape[0]
+        # img_group = img_group.reshape((-1, ) + img_group.shape[2:])
+        # num_seg = img_group.shape[0] // bs
+        def re_seg_bs(tensor):
+            bs = tensor.shape[0]
+            tensor = tensor.reshape((-1,) + tensor.shape[2:])
+            num_seg = tensor.shape[0] // bs
+            return tensor, bs, num_seg
+        if pos_encode is not None:
+            pos_en, bs, num_seg = re_seg_bs(pos_encode)
+        if an_encode is not None:
+            an_en, bs, num_seg = re_seg_bs(an_encode)
+        img_group, bs, num_seg = re_seg_bs(img_group)
         if self.with_flownet:
             if self.flownet.multiframe:
                 img_forward = img_group[:, :, 1:, :, :]
@@ -302,10 +357,23 @@ class TSN3D(BaseRecognizer):
             x = self.extract_feat(img_group)
         if self.with_spatial_temporal_module:
             x = self.spatial_temporal_module(x)
+            if x.shape[2] != 1 and self.with_time_head:
+                if len(an_en.shape) < 3:
+                    an_en = an_en.unsqueeze(1)
+                an_time_feat = self.an_time_embed(an_en)
+                pos_encode_feat = self.ob_time_embed(pos_en)
+                an_time_feat = an_time_feat.repeat((1, 1, pos_encode_feat.shape[-1]))
+                x = x.reshape(x.shape[:-2])
+                x = torch.cat([x, an_time_feat, pos_encode_feat], dim=1)
+                x = self.conv1x1(x)
+                x = torch.mean(x, dim=-1)
+                x = x.unsqueeze(2).unsqueeze(3).unsqueeze(4)
+
         if self.with_segmental_consensus:
             x = x.reshape((-1, num_seg) + x.shape[1:])
             x = self.segmental_consensus(x)
             x = x.squeeze(1)
+
         if self.with_cls_head:
             verb, noun = self.cls_head(x)
 

@@ -10,7 +10,7 @@ from .tenons.shared_heads import *
 from .tenons.bbox_heads import *
 from .detectors import *
 from .localizers import *
-
+from .tenons.encode_head import *
 
 from .registry import (BACKBONES, SPATIAL_TEMPORAL_MODULES, SEGMENTAL_CONSENSUSES, HEADS,
                        RECOGNIZERS, LOCALIZERS, DETECTORS, ARCHITECTURES,
