@@ -1,5 +1,4 @@
-
-ls# model settings
+# model settings
 
 model = dict(
     type='TSN3D',
